@@ -1,4 +1,6 @@
 defmodule Color.Tristimulus do
+  import Nx.Defn
+
   @doc false
 
   # https://www.easyrgb.com/en/math.php
@@ -80,22 +82,40 @@ defmodule Color.Tristimulus do
         end
       end)
 
-    {String.to_atom(illuminant), Enum.chunk_every(data, 3)}
+    [cie1931, cie1964] = Enum.chunk_every(data, 3)
+    {String.to_atom(illuminant), {Nx.tensor(cie1931), Nx.tensor(cie1964)}}
   end)
+  |> Map.new()
 
-  for {illuminant, [cie1931, cie1964]} <- @xyz_tristimulus do
-    cie1931 = Nx.tensor(cie1931)
-    cie1964 = Nx.tensor(cie1964)
-
-    def tristimulus(unquote(illuminant), 2), do: {:ok, unquote(Macro.escape(cie1931))}
-    def tristimulus(unquote(illuminant), 10), do: {:ok, unquote(Macro.escape(cie1964))}
+  defn tristimulus do
+    @xyz_tristimulus
   end
 
-  def tristimulus(illuminant, cie) when cie in @observer_angles do
-    {:error, "Invalid illuminant #{inspect illuminant}.  Valid illuminants are #{inspect @xyz_illuminants}"}
+  def tristimulus(illuminant, observer_angle) do
+    with {:ok, illuminant} <- validate_illuminant(illuminant),
+         {:ok, observer_angle} <- validate_observer_angle(observer_angle) do
+      case observer_angle do
+        2 ->
+          {:ok, Map.fetch!(tristimulus(), illuminant) |> elem(0)}
+        10 ->
+          {:ok, Map.fetch!(tristimulus(), illuminant) |> elem(1)}
+      end
+   end
   end
 
-  def tristimulus(_illuminant, observer_angle) do
-    {:error, "Invalid observer angle #{inspect observer_angle}. Valid observer angles are 2 and 10"}
+  def validate_illuminant(illuminant) do
+    if illuminant in illuminants() do
+      {:ok, illuminant}
+    else
+      {:error, "Invalid illuminant #{inspect illuminant}.  Valid illuminants are #{inspect @xyz_illuminants}"}
+    end
+  end
+
+  def validate_observer_angle(observer_angle) do
+    if observer_angle in @observer_angles do
+      {:ok, observer_angle}
+    else
+      {:error, "Unknown observer angle. Valid observer angles are #{inspect @observer_angles}"}
+    end
   end
 end

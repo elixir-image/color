@@ -1,5 +1,6 @@
 defmodule Color.ChromaticAdaptation do
   alias Color.Tristimulus
+  import Nx.Defn
 
   # http://www.brucelindbloom.com/index.html?Calc.html
   # https://web.stanford.edu/~sujason/ColorBalancing/adaptation.html
@@ -88,34 +89,38 @@ defmodule Color.ChromaticAdaptation do
     }
   }
 
-  @adaptation_methods Map.keys(@chromatic_adaptations)
-
-  def adaptations do
+  defn adaptations do
     @chromatic_adaptations
   end
 
-  def methods do
+  @adaptation_methods Map.keys(@chromatic_adaptations)
+
+  def adaptation_methods do
     unquote(@adaptation_methods)
   end
 
-  def ργβ(illuminant, observer_angle, adaptation_method \\ :bradford)
-
-  def ργβ(illuminant, observer_angle, adaptation_method) when is_atom(adaptation_method) do
+  def ργβ(illuminant, observer_angle, adaptation_method \\ :bradford) do
     {:ok, adaptation} = Map.fetch(adaptations(), adaptation_method)
-    ργβ(illuminant, observer_angle, adaptation)
-  end
-
-  def ργβ(illuminant, observer_angle, adaptation) when is_map_key(adaptation, :matrix) do
     {:ok, reference} = Tristimulus.tristimulus(illuminant, observer_angle)
     Nx.dot(adaptation.matrix, reference)
   end
 
-  def adaptation_matrix(source_illuminant, source_observer_angle, dest_illuminant, dest_observer_angle, adaptation_method \\ :bradford) do
-    adaptation = Map.fetch!(adaptations(), adaptation_method)
+  def adaptation_matrix(
+      source_illuminant,
+      source_observer_angle,
+      dest_illuminant,
+      dest_observer_angle,
+      adaptation_method \\ :bradford
+    ) do
+    {:ok, adaptation} = Map.fetch(adaptations(), adaptation_method)
 
-    ργβ_source = ργβ(source_illuminant, source_observer_angle, adaptation)
-    ργβ_destination = ργβ(dest_illuminant, dest_observer_angle, adaptation)
+    ργβ_source = ργβ(source_illuminant, source_observer_angle, adaptation_method)
+    ργβ_destination= ργβ(dest_illuminant, dest_observer_angle, adaptation_method)
 
+    do_adaptation_matrix(ργβ_source, ργβ_destination, adaptation)
+  end
+
+  defn do_adaptation_matrix(ργβ_source, ργβ_destination, adaptation) do
     scale_matrix =
       ργβ_destination
       |> Nx.divide(ργβ_source)
