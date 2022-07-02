@@ -51,5 +51,4 @@ defmodule Color.RGB do
   # DCI
 
   """
-
 end

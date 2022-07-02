@@ -21,10 +21,9 @@ defmodule Color.Tristimulus do
     end
   end
 
-
   @xyz_tristimulus_table """
-  #          2° (CIE 1931)      10° (CIE 1964)
-  # Illuminant  x2      y2     x10      y10    CCT     Description
+  #          2° (CIE 1931)    10° (CIE 1964)
+  # Illuminant x2      y2      x10      y10    CCT     Description
   A        0.44757  0.40745  0.45117  0.40594  2856  # incandescent / tungsten
   B        0.34842  0.35161  0.34980  0.35270  4874  # obsolete, direct sunlight at noon
   C        0.31006  0.31616  0.31039  0.31905  6774  # obsolete, average / North sky daylight
@@ -119,7 +118,10 @@ defmodule Color.Tristimulus do
           [{{String.to_atom(illuminant), 2}, cie1931}]
 
         [cie1931, cie1964] ->
-          [{{String.to_atom(illuminant), 2}, cie1931},{{String.to_atom(illuminant), 10}, cie1964}]
+          [
+            {{String.to_atom(illuminant), 2}, cie1931},
+            {{String.to_atom(illuminant), 10}, cie1964}
+          ]
       end
     end)
     |> Map.new()
@@ -137,8 +139,8 @@ defmodule Color.Tristimulus do
 
         _other ->
           {:error,
-            "Illuminant #{inspect illuminant} has no tristimulus " <>
-            "for #{inspect observer_angle}° observer angle."}
+           "Illuminant #{inspect(illuminant)} has no tristimulus " <>
+             "for #{inspect(observer_angle)}° observer angle."}
       end
     end
   end
@@ -149,8 +151,8 @@ defmodule Color.Tristimulus do
 
   defp validate_illuminant(illuminant) do
     {:error,
-      "Invalid illuminant #{inspect(illuminant)}.  " <>
-      "Valid illuminants are #{inspect(@illuminants)}"}
+     "Invalid illuminant #{inspect(illuminant)}.  " <>
+       "Valid illuminants are #{inspect(@illuminants)}"}
   end
 
   defp validate_observer_angle(observer_angle) when observer_angle in @observer_angles do
@@ -159,7 +161,7 @@ defmodule Color.Tristimulus do
 
   defp validate_observer_angle(observer_angle) do
     {:error,
-      "Unknown observer angle #{inspect observer_angle}. " <>
-      "Valid observer angles are #{inspect(@observer_angles)}"}
+     "Unknown observer angle #{inspect(observer_angle)}. " <>
+       "Valid observer angles are #{inspect(@observer_angles)}"}
   end
 end

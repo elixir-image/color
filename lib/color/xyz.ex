@@ -14,9 +14,8 @@ defmodule Color.XYZ do
         dest_observer_angle <- Tristimulus.observer_angles(),
         adaptation_method <- Color.ChromaticAdaptation.adaptation_methods(),
         {source_illuminant, source_observer_angle} != {dest_illuminant, dest_observer_angle} do
-
-      with{:ok, _reference} <- Tristimulus.tristimulus(source_illuminant, source_observer_angle),
-          {:ok, _reference} <- Tristimulus.tristimulus(dest_illuminant, dest_observer_angle) do
+      with {:ok, _reference} <- Tristimulus.tristimulus(source_illuminant, source_observer_angle),
+           {:ok, _reference} <- Tristimulus.tristimulus(dest_illuminant, dest_observer_angle) do
         matrix =
           ChromaticAdaptation.adaptation_matrix(
             source_illuminant,
@@ -31,8 +30,9 @@ defmodule Color.XYZ do
            adaptation_method}
 
         {key, matrix}
-      else _other ->
-        nil
+      else
+        _other ->
+          nil
       end
     end
     |> Enum.reject(&is_nil/1)

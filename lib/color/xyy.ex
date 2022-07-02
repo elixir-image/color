@@ -1,9 +1,7 @@
 defmodule Color.XYY do
-  defstruct [
-    x: nil,
-    y: nil,
-    yY: 1.0
-  ]
+  defstruct x: nil,
+            y: nil,
+            yY: 1.0
 
   def to_xyz(%__MODULE__{x: x, y: y, yY: yY}) do
     [xi, yi, zi] = to_xyz([x, y, yY])
@@ -22,7 +20,7 @@ defmodule Color.XYY do
   def to_xyz([x, y, yY]) do
     xi = x * yY / y
     yi = yY
-    zi = ((1.0 - x - y) * yY) / y
+    zi = (1.0 - x - y) * yY / y
 
     [xi, yi, zi]
   end
@@ -36,5 +34,4 @@ defmodule Color.XYY do
     |> to_xyz()
     |> Nx.tensor()
   end
-
 end
