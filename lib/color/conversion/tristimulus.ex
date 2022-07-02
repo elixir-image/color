@@ -79,6 +79,8 @@ defmodule Color.Tristimulus do
     ACES: :D60
   }
 
+  @illumimant_alias_names Map.keys(@illuminant_aliases)
+
   @illuminants @xyz_tristimulus_table
     |> String.split("\n", trim: true)
     |> Enum.reject(&String.starts_with?(&1, "#"))
@@ -147,6 +149,10 @@ defmodule Color.Tristimulus do
 
   defp validate_illuminant(illuminant) when illuminant in @illuminants do
     {:ok, illuminant}
+  end
+
+  defp validate_illuminant(illuminant) when illuminant in @illumimant_alias_names do
+    {:ok, Map.fetch!(@illuminant_aliases, illuminant)}
   end
 
   defp validate_illuminant(illuminant) do
