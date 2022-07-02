@@ -1,4 +1,4 @@
-defmodule Color.RBG.WorkingSpace do
+defmodule Color.RGB.WorkingSpace do
 
   @rgb_working_space_table """
   # Name    Gamma WP     xr      yr       Yr       xg     yg       Yg        xb      yb      bY
@@ -63,8 +63,10 @@ defmodule Color.RBG.WorkingSpace do
           end
         end)
 
-      data = Enum.chunk_every(data, 3)
-      {String.to_atom(working_space), %{gamma: gamma, white_point: white_point, chromaticty: data}}
+      [ρ, γ, β] = Enum.chunk_every(data, 3)
+      data = %{gamma: gamma, white_point: white_point, ρ: ρ, γ: γ, β: β}
+
+      {String.to_atom(working_space), data}
     end)
     |> Map.new()
 
