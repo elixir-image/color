@@ -15,15 +15,28 @@ defmodule Color.XYZ do
         adaptation_method <- Color.ChromaticAdaptation.adaptation_methods(),
         {source_illuminant, source_observer_angle} != {dest_illuminant, dest_observer_angle} do
 
-      matrix =
-        ChromaticAdaptation.adaptation_matrix(source_illuminant, source_observer_angle, dest_illuminant, dest_observer_angle, adaptation_method)
+      with{:ok, _reference} <- Tristimulus.tristimulus(source_illuminant, source_observer_angle),
+          {:ok, _reference} <- Tristimulus.tristimulus(dest_illuminant, dest_observer_angle) do
+        matrix =
+          ChromaticAdaptation.adaptation_matrix(
+            source_illuminant,
+            source_observer_angle,
+            dest_illuminant,
+            dest_observer_angle,
+            adaptation_method
+          )
 
-      key =
-        {source_illuminant, source_observer_angle, dest_illuminant, dest_observer_angle, adaptation_method}
+        key =
+          {source_illuminant, source_observer_angle, dest_illuminant, dest_observer_angle,
+           adaptation_method}
 
-      {key, matrix}
+        {key, matrix}
+      else _other ->
+        nil
+      end
     end
-    |> Map.new
+    |> Enum.reject(&is_nil/1)
+    |> Map.new()
   end
 
   @chromatic_adaptations adaptations.()
@@ -33,13 +46,16 @@ defmodule Color.XYZ do
   end
 
   def chromatic_adaptation(
-      source_illuminant,
-      source_observer_angle,
-      dest_illuminant,
-      dest_observer_angle,
-      adaptation_method) do
-    Map.get(chromatic_adaptations(),
-      {source_illuminant, source_observer_angle, dest_illuminant, dest_observer_angle, adaptation_method}
+        source_illuminant,
+        source_observer_angle,
+        dest_illuminant,
+        dest_observer_angle,
+        adaptation_method
+      ) do
+    Map.get(
+      chromatic_adaptations(),
+      {source_illuminant, source_observer_angle, dest_illuminant, dest_observer_angle,
+       adaptation_method}
     )
   end
 end

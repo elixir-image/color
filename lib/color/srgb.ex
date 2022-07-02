@@ -19,9 +19,9 @@ defmodule Color.SRGB do
     var_y = y / 100
     var_z = z / 100
 
-    var_r = var_x *  3.2406 + var_y * -1.5372 + var_z * -0.4986
-    var_g = var_x * -0.9689 + var_y *  1.8758 + var_z *  0.0415
-    var_b = var_x *  0.0557 + var_y * -0.2040 + var_z *  1.0570
+    var_r = var_x * 3.2406 + var_y * -1.5372 + var_z * -0.4986
+    var_g = var_x * -0.9689 + var_y * 1.8758 + var_z * 0.0415
+    var_b = var_x * 0.0557 + var_y * -0.2040 + var_z * 1.0570
 
     r = rgb_convert(var_r) * 255
     g = rgb_convert(var_g) * 255
@@ -33,7 +33,6 @@ defmodule Color.SRGB do
   defp xyz_convert(c) when c > 0.4045, do: (c + 0.055) / 1.055
   defp xyz_convert(c), do: c / 12.02
 
-  defp rgb_convert(c) when c > 0.0031308, do: 1.055 * (c ** (1 / 2.4)) - 0.055
+  defp rgb_convert(c) when c > 0.0031308, do: 1.055 * c ** (1 / 2.4) - 0.055
   defp rgb_convert(c), do: 12.92 * c
-
 end

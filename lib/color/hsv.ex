@@ -12,7 +12,7 @@ defmodule Color.Hsv do
     var_h = if var_h == 6, do: 0, else: var_h
 
     var_i = floor(var_h)
-    var_1 = v * (1 - s )
+    var_1 = v * (1 - s)
     var_2 = v * (1 - s * (var_h - var_i))
     var_3 = v * (1 - s * (1 - (var_h - var_i)))
 

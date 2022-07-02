@@ -5,9 +5,9 @@ defmodule Color.AdobeRGB do
   # aR, aG and aB (RGB Adobe 1998) output range = 0 ÷ 255
 
   def to_xyz(%__MODULE__{r: r, g: g, b: b, alpha: alpha}) do
-    var_r = ((r / 255) ** 2.19921875) * 100
-    var_g = ((g / 255) ** 2.19921875) * 100
-    var_b = ((b / 255) ** 2.19921875) * 100
+    var_r = (r / 255) ** 2.19921875 * 100
+    var_g = (g / 255) ** 2.19921875 * 100
+    var_b = (b / 255) ** 2.19921875 * 100
 
     x = var_r * 0.57667 + var_g * 0.18555 + var_b * 0.18819
     y = var_r * 0.29738 + var_g * 0.62735 + var_b * 0.07527
