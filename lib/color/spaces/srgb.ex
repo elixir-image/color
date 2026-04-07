@@ -202,48 +202,53 @@ defmodule Color.SRGB do
   end
 
   defp parse_hex(hex) do
+    original = hex
     hex = String.downcase(hex)
 
     case String.length(hex) do
       3 ->
         [r, g, b] = String.graphemes(hex)
 
-        with {:ok, {r, g, b}} <- parse_bytes([r <> r, g <> g, b <> b]) do
+        with {:ok, {r, g, b}} <- parse_bytes([r <> r, g <> g, b <> b], original) do
           {:ok, unscale255({r, g, b})}
         end
 
       4 ->
         [r, g, b, a] = String.graphemes(hex)
 
-        with {:ok, {r, g, b, a}} <- parse_bytes_alpha([r <> r, g <> g, b <> b, a <> a]) do
+        with {:ok, {r, g, b, a}} <-
+               parse_bytes_alpha([r <> r, g <> g, b <> b, a <> a], original) do
           {:ok, %__MODULE__{r: r / 255, g: g / 255, b: b / 255, alpha: a / 255}}
         end
 
       6 ->
         <<r::binary-2, g::binary-2, b::binary-2>> = hex
 
-        with {:ok, {r, g, b}} <- parse_bytes([r, g, b]) do
+        with {:ok, {r, g, b}} <- parse_bytes([r, g, b], original) do
           {:ok, unscale255({r, g, b})}
         end
 
       8 ->
         <<r::binary-2, g::binary-2, b::binary-2, a::binary-2>> = hex
 
-        with {:ok, {r, g, b, a}} <- parse_bytes_alpha([r, g, b, a]) do
+        with {:ok, {r, g, b, a}} <- parse_bytes_alpha([r, g, b, a], original) do
           {:ok, %__MODULE__{r: r / 255, g: g / 255, b: b / 255, alpha: a / 255}}
         end
 
       _ ->
-        {:error, "Invalid hex color #{inspect(hex)}"}
+        {:error, %Color.InvalidHexError{hex: original, reason: :bad_length}}
     end
   end
 
-  defp parse_bytes(list) do
+  defp parse_bytes(list, original) do
     list
     |> Enum.reduce_while({:ok, []}, fn s, {:ok, acc} ->
       case Integer.parse(s, 16) do
-        {n, ""} when n in 0..255 -> {:cont, {:ok, [n | acc]}}
-        _ -> {:halt, {:error, "Invalid hex byte #{inspect(s)}"}}
+        {n, ""} when n in 0..255 ->
+          {:cont, {:ok, [n | acc]}}
+
+        _ ->
+          {:halt, {:error, %Color.InvalidHexError{hex: original, reason: :bad_byte}}}
       end
     end)
     |> case do
@@ -252,12 +257,15 @@ defmodule Color.SRGB do
     end
   end
 
-  defp parse_bytes_alpha(list) do
+  defp parse_bytes_alpha(list, original) do
     list
     |> Enum.reduce_while({:ok, []}, fn s, {:ok, acc} ->
       case Integer.parse(s, 16) do
-        {n, ""} when n in 0..255 -> {:cont, {:ok, [n | acc]}}
-        _ -> {:halt, {:error, "Invalid hex byte #{inspect(s)}"}}
+        {n, ""} when n in 0..255 ->
+          {:cont, {:ok, [n | acc]}}
+
+        _ ->
+          {:halt, {:error, %Color.InvalidHexError{hex: original, reason: :bad_byte}}}
       end
     end)
     |> case do

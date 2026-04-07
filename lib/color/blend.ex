@@ -90,7 +90,7 @@ defmodule Color.Blend do
   end
 
   def blend(_, _, mode) do
-    {:error, "Unknown blend mode #{inspect(mode)}"}
+    {:error, %Color.UnknownBlendModeError{mode: mode, valid: @separable ++ @nonseparable}}
   end
 
   # ---- separable modes -------------------------------------------------------

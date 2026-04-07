@@ -1,6 +1,6 @@
 # Color
 
-Color is a library to represent and manipulate color information. It is in active development but not yet ready for any use.
+Color is a library to represent and manipulate color information.
 
 The library aims to be a thorough platform for color-aware applications including:
 * Color specification in many color spaces

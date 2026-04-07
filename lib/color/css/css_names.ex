@@ -202,7 +202,7 @@ defmodule Color.CSSNames do
   def lookup(name) when is_binary(name) do
     case Map.fetch(@names, normalize(name)) do
       {:ok, rgb} -> {:ok, rgb}
-      :error -> {:error, "Unknown CSS color name #{inspect(name)}"}
+      :error -> {:error, %Color.UnknownColorNameError{name: name}}
     end
   end
 

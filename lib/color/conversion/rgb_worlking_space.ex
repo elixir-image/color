@@ -116,7 +116,7 @@ defmodule Color.RGB.WorkingSpace do
   def from_css_name(name) when is_binary(name) do
     case Map.fetch(@css_names, String.downcase(name)) do
       {:ok, atom} -> {:ok, atom}
-      :error -> {:error, "Unknown CSS working space #{inspect(name)}"}
+      :error -> {:error, %Color.UnknownWorkingSpaceError{working_space: name}}
     end
   end
 
@@ -206,7 +206,9 @@ defmodule Color.RGB.WorkingSpace do
 
   def rgb_conversion_matrix(rgb_space) do
     {:error,
-     "Unknown RGB working space #{inspect(rgb_space)}. " <>
-       "Valid spaces are #{inspect(@rgb_working_space_names)}"}
+     %Color.UnknownWorkingSpaceError{
+       working_space: rgb_space,
+       valid: @rgb_working_space_names
+     }}
   end
 end

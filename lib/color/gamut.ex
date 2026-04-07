@@ -90,9 +90,14 @@ defmodule Color.Gamut do
     method = Keyword.get(options, :method, :oklch)
 
     case method do
-      :clip -> clip(color, working_space)
-      :oklch -> map_oklch(color, working_space)
-      other -> {:error, "Unknown gamut mapping method #{inspect(other)}"}
+      :clip ->
+        clip(color, working_space)
+
+      :oklch ->
+        map_oklch(color, working_space)
+
+      other ->
+        {:error, %Color.UnknownGamutMethodError{method: other, valid: [:clip, :oklch]}}
     end
   end
 

@@ -328,14 +328,13 @@ defmodule Color do
       iex> c.c
       0.0
 
-      iex> Color.new([1.0, 0, 0])
-      {:error, "sRGB list must be all floats or all integers, not a mix: [1.0, 0, 0]"}
+      iex> {:error, %Color.InvalidComponentError{reason: :mixed_types}} = Color.new([1.0, 0, 0])
 
-      iex> Color.new([300, 0, 0])
-      {:error, "sRGB integer channel out of 0..255 range: [300, 0, 0]"}
+      iex> {:error, %Color.InvalidComponentError{reason: :out_of_range, range: {0, 255}}} =
+      ...>   Color.new([300, 0, 0])
 
-      iex> Color.new([1, 2, 3], :lab)
-      {:error, "Lab expects a list of floats, not integers: [1, 2, 3]"}
+      iex> {:error, %Color.InvalidComponentError{reason: :integers_not_allowed, space: "Lab"}} =
+      ...>   Color.new([1, 2, 3], :lab)
 
   """
   # Maps friendly atoms and module atoms to a canonical short atom.
@@ -394,7 +393,27 @@ defmodule Color do
   def new([_, _, _, _, _] = list, space), do: list_to_color(list, space)
 
   def new(string, _space) when is_binary(string) do
-    Color.SRGB.parse(string)
+    trimmed = String.trim(string)
+
+    cond do
+      # Hex shorthand or full hex — fast path through SRGB.parse.
+      String.starts_with?(trimmed, "#") ->
+        Color.SRGB.parse(trimmed)
+
+      # Anything that *looks* like a CSS color function call
+      # (`rgb(...)`, `hsl(...)`, `lab(...)`, `oklch(...)`,
+      # `color(...)`, `device-cmyk(...)`, `color-mix(...)`, etc.)
+      # goes through the full CSS Color 5 parser.
+      Regex.match?(
+        ~r/^(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|device-cmyk|color-mix)\s*\(/i,
+        trimmed
+      ) ->
+        Color.CSS.parse(trimmed)
+
+      # Named colours and bare hex.
+      true ->
+        Color.SRGB.parse(trimmed)
+    end
   end
 
   def new(name, _space) when is_atom(name) and name not in [nil, true, false] do
@@ -408,18 +427,20 @@ defmodule Color do
     if struct in @xyz_hub or struct == Color.RGB do
       {:ok, color}
     else
-      {:error, "Unsupported color struct #{inspect(struct)}"}
+      {:error,
+       %Color.UnsupportedTargetError{target: struct}}
     end
   end
 
   def new(other, _space) do
-    {:error, "Cannot build a color from #{inspect(other)}"}
+    {:error,
+     %Color.InvalidColorError{value: other, reason: "input is not a list, string, atom or struct"}}
   end
 
   defp list_to_color(list, space) do
     case Map.fetch(@space_aliases, space) do
       {:ok, canonical} -> build(canonical, list)
-      :error -> {:error, "Unknown color space #{inspect(space)}"}
+      :error -> {:error, %Color.UnknownColorSpaceError{space: space}}
     end
   end
 
@@ -430,7 +451,7 @@ defmodule Color do
   # Strict CMYK — 4 or 5 channels
   defp build(:cmyk, list) when length(list) in [4, 5], do: strict_cmyk(list)
   defp build(:cmyk, list),
-    do: {:error, "CMYK expects a list of 4 or 5 numbers, got #{length(list)}: #{inspect(list)}"}
+    do: {:error, %Color.InvalidComponentError{space: "CMYK", value: list, reason: :wrong_count}}
 
   # Strict unit-range cylindrical (HSL, HSV — hue in [0, 1])
   defp build(:hsl, list), do: strict_unit_cyl(list, Color.Hsl, "HSL", [:h, :s, :l])
@@ -488,11 +509,11 @@ defmodule Color do
   end
 
   defp build(:xyy, list) do
-    {:error, "xyY expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
+    {:error, %Color.InvalidComponentError{space: "xyY", value: list, reason: :wrong_count}}
   end
 
   defp build(other, _list) do
-    {:error, "Unknown color space #{inspect(other)}"}
+    {:error, %Color.UnknownColorSpaceError{space: other}}
   end
 
   defp strict_rgb(list, module, label) when length(list) in [3, 4] do
@@ -508,17 +529,15 @@ defmodule Color do
         end
 
       Enum.all?(list, &is_number/1) ->
-        {:error,
-         "#{label} list must be all floats or all integers, not a mix: " <>
-           inspect(list)}
+        {:error, %Color.InvalidComponentError{space: label, value: list, reason: :mixed_types}}
 
       true ->
-        {:error, "#{label} list must contain only numbers: " <> inspect(list)}
+        {:error, %Color.InvalidComponentError{space: label, value: list, reason: :not_numeric}}
     end
   end
 
   defp strict_rgb(list, _module, label) do
-    {:error, "#{label} expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
+    {:error, %Color.InvalidComponentError{space: label, value: list, reason: :wrong_count}}
   end
 
   defp strict_cmyk(list) do
@@ -536,21 +555,22 @@ defmodule Color do
         end
 
       Enum.all?(list, &is_number/1) ->
-        {:error,
-         "CMYK list must be all floats or all integers, not a mix: " <> inspect(list)}
+        {:error, %Color.InvalidComponentError{space: label, value: list, reason: :mixed_types}}
 
       true ->
-        {:error, "CMYK list must contain only numbers: " <> inspect(list)}
+        {:error, %Color.InvalidComponentError{space: label, value: list, reason: :not_numeric}}
     end
   end
 
   defp strict_unit_cyl(list, module, label, keys) when length(list) in [3, 4] do
     cond do
       Enum.any?(list, &is_integer/1) ->
-        {:error, "#{label} expects a list of floats, not integers: " <> inspect(list)}
+        {:error,
+         %Color.InvalidComponentError{space: label, value: list, reason: :integers_not_allowed}}
 
       not Enum.all?(list, &is_float/1) ->
-        {:error, "#{label} list must contain only floats: " <> inspect(list)}
+        {:error,
+         %Color.InvalidComponentError{space: label, value: list, reason: :floats_required}}
 
       true ->
         [h | rest] = list
@@ -564,16 +584,18 @@ defmodule Color do
   end
 
   defp strict_unit_cyl(list, _module, label, _) do
-    {:error, "#{label} expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
+    {:error, %Color.InvalidComponentError{space: label, value: list, reason: :wrong_count}}
   end
 
   defp strict_deg_percent(list, module, label) when length(list) in [3, 4] do
     cond do
       Enum.any?(list, &is_integer/1) ->
-        {:error, "#{label} expects a list of floats, not integers: " <> inspect(list)}
+        {:error,
+         %Color.InvalidComponentError{space: label, value: list, reason: :integers_not_allowed}}
 
       not Enum.all?(list, &is_float/1) ->
-        {:error, "#{label} list must contain only floats: " <> inspect(list)}
+        {:error,
+         %Color.InvalidComponentError{space: label, value: list, reason: :floats_required}}
 
       true ->
         [h | rest] = list
@@ -589,7 +611,7 @@ defmodule Color do
   end
 
   defp strict_deg_percent(list, _module, label) do
-    {:error, "#{label} expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
+    {:error, %Color.InvalidComponentError{space: label, value: list, reason: :wrong_count}}
   end
 
   defp permissive_3(list, module, label, [k1, k2, k3], extras) when length(list) in [3, 4] do
@@ -601,7 +623,7 @@ defmodule Color do
   end
 
   defp permissive_3(list, _module, label, _, _) do
-    {:error, "#{label} expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
+    {:error, %Color.InvalidComponentError{space: label, value: list, reason: :wrong_count}}
   end
 
   defp permissive_hue(list, module, label, [k1, k2, k3], extras) when length(list) in [3, 4] do
@@ -613,22 +635,24 @@ defmodule Color do
   end
 
   defp permissive_hue(list, _module, label, _, _) do
-    {:error, "#{label} expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
+    {:error, %Color.InvalidComponentError{space: label, value: list, reason: :wrong_count}}
   end
 
   defp permissive_list(list, label) do
     cond do
       Enum.any?(list, &is_integer/1) ->
-        {:error, "#{label} expects a list of floats, not integers: " <> inspect(list)}
+        {:error,
+         %Color.InvalidComponentError{space: label, value: list, reason: :integers_not_allowed}}
 
       not Enum.all?(list, &is_float/1) ->
-        {:error, "#{label} list must contain only floats: " <> inspect(list)}
+        {:error,
+         %Color.InvalidComponentError{space: label, value: list, reason: :floats_required}}
 
       Enum.any?(list, &(&1 != &1)) ->
-        {:error, "#{label} list contains NaN: " <> inspect(list)}
+        {:error, %Color.InvalidComponentError{space: label, value: list, reason: :nan}}
 
       Enum.any?(list, fn f -> f == :infinity or f == :neg_infinity end) ->
-        {:error, "#{label} list contains infinity: " <> inspect(list)}
+        {:error, %Color.InvalidComponentError{space: label, value: list, reason: :infinity}}
 
       true ->
         {:ok, list}
@@ -653,7 +677,13 @@ defmodule Color do
     if Enum.all?(list, fn n -> n >= lo and n <= hi end) do
       :ok
     else
-      {:error, "#{label} integer channel out of #{lo}..#{hi} range: " <> inspect(list)}
+      {:error,
+       %Color.InvalidComponentError{
+         space: label,
+         value: list,
+         range: {lo, hi},
+         reason: :out_of_range
+       }}
     end
   end
 
@@ -661,7 +691,13 @@ defmodule Color do
     if Enum.all?(list, fn n -> n >= lo and n <= hi end) do
       :ok
     else
-      {:error, "#{label} float channel out of [#{lo}, #{hi}] range: " <> inspect(list)}
+      {:error,
+       %Color.InvalidComponentError{
+         space: label,
+         value: list,
+         range: {lo, hi},
+         reason: :out_of_range
+       }}
     end
   end
 
@@ -812,9 +848,7 @@ defmodule Color do
   end
 
   defp do_convert(_color, Color.RGB, nil, _options) do
-    {:error,
-     "Color.RGB needs a working space. Use convert(color, Color.RGB, :SRGB) " <>
-       "or convert(color, Color.RGB, :Rec2020, intent: :perceptual)."}
+    {:error, %Color.MissingWorkingSpaceError{}}
   end
 
   defp do_convert(color, Color.RGB, working_space, options) do
@@ -846,7 +880,7 @@ defmodule Color do
   end
 
   defp do_convert(_color, target, _, _options) do
-    {:error, "Unsupported target color module #{inspect(target)}"}
+    {:error, %Color.UnsupportedTargetError{target: target}}
   end
 
   # Called from convert/3 for non-RGB targets.

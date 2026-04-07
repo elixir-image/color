@@ -35,6 +35,8 @@ defmodule ColorTest do
   doctest Color.Harmony
   doctest Color.Temperature
   doctest Color.CSS
+  doctest Color.CSS.Tokenizer
+  doctest Color.CSS.Calc
   doctest Color.Blend
 
   if Version.match?(System.version(), ">= 1.15.0") do
@@ -192,32 +194,46 @@ defmodule ColorTest do
     end
 
     test "new/1 rejects mixed integers and floats" do
-      assert {:error, message} = Color.new([1.0, 0, 0])
-      assert message =~ "all floats or all integers"
+      assert {:error, %Color.InvalidComponentError{reason: :mixed_types}} =
+               Color.new([1.0, 0, 0])
 
-      assert {:error, _} = Color.new([255, 0.5, 0])
-      assert {:error, _} = Color.new([1, 2, 3, 0.5])
+      assert {:error, %Color.InvalidComponentError{reason: :mixed_types}} =
+               Color.new([255, 0.5, 0])
+
+      assert {:error, %Color.InvalidComponentError{reason: :mixed_types}} =
+               Color.new([1, 2, 3, 0.5])
     end
 
     test "new/1 rejects out-of-range integers" do
-      assert {:error, message} = Color.new([300, 0, 0])
-      assert message =~ "0..255"
+      assert {:error,
+              %Color.InvalidComponentError{reason: :out_of_range, range: {0, 255}}} =
+               Color.new([300, 0, 0])
 
-      assert {:error, _} = Color.new([-1, 0, 0])
-      assert {:error, _} = Color.new([255, 255, 255, 256])
+      assert {:error, %Color.InvalidComponentError{reason: :out_of_range}} =
+               Color.new([-1, 0, 0])
+
+      assert {:error, %Color.InvalidComponentError{reason: :out_of_range}} =
+               Color.new([255, 255, 255, 256])
     end
 
     test "new/1 rejects out-of-range floats" do
-      assert {:error, message} = Color.new([1.5, 0.0, 0.0])
-      assert message =~ "[0.0, 1.0]"
+      assert {:error,
+              %Color.InvalidComponentError{reason: :out_of_range, range: {lo, hi}}} =
+               Color.new([1.5, 0.0, 0.0])
 
-      assert {:error, _} = Color.new([-0.1, 0.0, 0.0])
-      assert {:error, _} = Color.new([0.0, 0.0, 0.0, 2.0])
+      assert lo == +0.0
+      assert hi == 1.0
+
+      assert {:error, %Color.InvalidComponentError{reason: :out_of_range}} =
+               Color.new([-0.1, 0.0, 0.0])
+
+      assert {:error, %Color.InvalidComponentError{reason: :out_of_range}} =
+               Color.new([0.0, 0.0, 0.0, 2.0])
     end
 
     test "new/1 rejects non-numeric list elements" do
-      assert {:error, message} = Color.new([1.0, :red, 0.0])
-      assert message =~ "only numbers"
+      assert {:error, %Color.InvalidComponentError{reason: :not_numeric}} =
+               Color.new([1.0, :red, 0.0])
     end
 
     test "new/1 integer list and equivalent float list produce the same color" do
@@ -298,8 +314,9 @@ defmodule ColorTest do
 
     test "integer form rejected for non-RGB spaces" do
       for space <- [:lab, :oklab, :xyz, :hsl, :hsluv, :jzazbz, :oklch] do
-        assert {:error, message} = Color.new([1, 2, 3], space)
-        assert message =~ "floats", "space=#{inspect(space)}"
+        assert {:error, %Color.InvalidComponentError{reason: :integers_not_allowed}} =
+                 Color.new([1, 2, 3], space),
+               "space=#{inspect(space)}"
       end
     end
 
@@ -359,8 +376,8 @@ defmodule ColorTest do
     end
 
     test "unknown space returns error" do
-      assert {:error, message} = Color.new([0.0, 0.0, 0.0], :notaspace)
-      assert message =~ "Unknown color space"
+      assert {:error, %Color.UnknownColorSpaceError{space: :notaspace}} =
+               Color.new([0.0, 0.0, 0.0], :notaspace)
     end
 
     test "wrong element count returns error" do
