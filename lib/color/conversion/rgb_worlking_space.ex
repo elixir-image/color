@@ -80,6 +80,79 @@ defmodule Color.RGB.WorkingSpace do
     @rgb_working_space
   end
 
+  # CSS Color Module 4 working-space names → our internal atoms.
+  @css_names %{
+    "srgb" => :SRGB,
+    "srgb-linear" => :SRGB,
+    "display-p3" => :P3_D65,
+    "a98-rgb" => :Adobe,
+    "prophoto-rgb" => :ProPhoto,
+    "rec2020" => :Rec2020,
+    "rec709" => :Rec709
+  }
+
+  @doc """
+  Looks up an RGB working space by its CSS Color 4 name.
+
+  ### Arguments
+
+  * `name` is a string.
+
+  ### Returns
+
+  * `{:ok, atom}` — the internal working-space atom.
+
+  * `{:error, reason}` if the name is unknown.
+
+  ### Examples
+
+      iex> Color.RGB.WorkingSpace.from_css_name("display-p3")
+      {:ok, :P3_D65}
+
+      iex> Color.RGB.WorkingSpace.from_css_name("srgb")
+      {:ok, :SRGB}
+
+  """
+  def from_css_name(name) when is_binary(name) do
+    case Map.fetch(@css_names, String.downcase(name)) do
+      {:ok, atom} -> {:ok, atom}
+      :error -> {:error, "Unknown CSS working space #{inspect(name)}"}
+    end
+  end
+
+  @doc """
+  Returns the CSS Color 4 name for an internal working-space atom,
+  or `nil` if there isn't one.
+
+  ### Arguments
+
+  * `atom` is a working-space atom.
+
+  ### Returns
+
+  * A string or `nil`.
+
+  ### Examples
+
+      iex> Color.RGB.WorkingSpace.to_css_name(:P3_D65)
+      "display-p3"
+
+      iex> Color.RGB.WorkingSpace.to_css_name(:SRGB)
+      "srgb"
+
+      iex> Color.RGB.WorkingSpace.to_css_name(:Bruce)
+      nil
+
+  """
+  def to_css_name(atom) when is_atom(atom) do
+    @css_names
+    |> Enum.find(fn {_, a} -> a == atom end)
+    |> case do
+      {name, _} -> name
+      nil -> nil
+    end
+  end
+
   @doc """
   Returns the RGB→XYZ and XYZ→RGB conversion matrices for a named RGB
   working space, computed from its primaries and reference white using

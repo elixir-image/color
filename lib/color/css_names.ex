@@ -154,19 +154,27 @@ defmodule Color.CSSNames do
     "white" => {255, 255, 255},
     "whitesmoke" => {245, 245, 245},
     "yellow" => {255, 255, 0},
-    "yellowgreen" => {154, 205, 50}
+    "yellowgreen" => {154, 205, 50},
+
+    # Non-standard additions used in sibling projects. Kept here for
+    # drop-in compatibility with Image.Color's `additional_colors.csv`.
+    "chromagreen" => {0, 177, 64},
+    "chromablue" => {0, 71, 187}
   }
 
   @doc """
   Looks up a CSS named color and returns its 8-bit sRGB components.
 
-  Name lookup is case-insensitive. Both US and UK spellings (`gray` /
-  `grey`) are supported. `"transparent"` maps to `(0, 0, 0)` — the
-  alpha is the caller's concern.
+  The lookup is case-insensitive, accepts strings or atoms, and
+  ignores underscores, hyphens and whitespace in the name. So
+  `"rebecca purple"`, `:rebecca_purple`, `"Rebecca-Purple"` and
+  `"rebeccapurple"` all resolve to the same color. Both US and UK
+  spellings (`gray` / `grey`) are supported. `"transparent"` maps to
+  `(0, 0, 0)` — the alpha is the caller's concern.
 
   ### Arguments
 
-  * `name` is a string.
+  * `name` is a string or an atom.
 
   ### Returns
 
@@ -182,13 +190,118 @@ defmodule Color.CSSNames do
       iex> Color.CSSNames.lookup("Red")
       {:ok, {255, 0, 0}}
 
+      iex> Color.CSSNames.lookup(:misty_rose)
+      {:ok, {255, 228, 225}}
+
+      iex> Color.CSSNames.lookup("chroma green")
+      {:ok, {0, 177, 64}}
+
   """
+  def lookup(name) when is_atom(name), do: lookup(Atom.to_string(name))
+
   def lookup(name) when is_binary(name) do
-    case Map.fetch(@names, String.downcase(name)) do
+    case Map.fetch(@names, normalize(name)) do
       {:ok, rgb} -> {:ok, rgb}
       :error -> {:error, "Unknown CSS color name #{inspect(name)}"}
     end
   end
+
+  @doc """
+  Normalises a color-name string: lowercases and strips underscores,
+  hyphens and whitespace. Exposed so callers can match on the
+  canonical form.
+
+  ### Arguments
+
+  * `name` is a string.
+
+  ### Returns
+
+  * The normalised string.
+
+  ### Examples
+
+      iex> Color.CSSNames.normalize("Misty Rose")
+      "mistyrose"
+
+      iex> Color.CSSNames.normalize("rebecca-purple")
+      "rebeccapurple"
+
+  """
+  def normalize(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(["_", "-", " "], "")
+  end
+
+  @doc """
+  Returns whether the given name is a known CSS color name.
+
+  ### Arguments
+
+  * `name` is a string or atom.
+
+  ### Returns
+
+  * A boolean.
+
+  ### Examples
+
+      iex> Color.CSSNames.known?("red")
+      true
+
+      iex> Color.CSSNames.known?(:misty_rose)
+      true
+
+      iex> Color.CSSNames.known?("notacolor")
+      false
+
+  """
+  def known?(name) when is_atom(name), do: known?(Atom.to_string(name))
+  def known?(name) when is_binary(name), do: Map.has_key?(@names, normalize(name))
+
+  @doc """
+  Finds the CSS named color that is perceptually closest to the given
+  color using CIEDE2000.
+
+  ### Arguments
+
+  * `color` is anything accepted by `Color.new/1`.
+
+  ### Returns
+
+  * `{:ok, {name, %Color.SRGB{}, delta_e}}` on success.
+
+  ### Examples
+
+      iex> {:ok, {name, _srgb, _de}} = Color.CSSNames.nearest(%Color.SRGB{r: 1.0, g: 0.01, b: 0.0})
+      iex> name
+      "red"
+
+  """
+  def nearest(input) do
+    with {:ok, source} <- Color.new(input) do
+      {name, rgb, de} =
+        @names
+        |> Enum.map(fn {name, rgb_tuple} ->
+          srgb = Color.SRGB.unscale255(rgb_tuple)
+          {name, srgb, Color.Distance.delta_e_2000(source, srgb)}
+        end)
+        |> Enum.min_by(fn {_, _, de} -> de end)
+
+      {:ok, {name, rgb, de}}
+    end
+  end
+
+  @doc """
+  Returns the raw CSS-name → `{r, g, b}` map (0..255 bytes).
+
+  ### Returns
+
+  * A map.
+
+  """
+  def all, do: @names
 
   @doc """
   Returns the full list of CSS color name strings.
