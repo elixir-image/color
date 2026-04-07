@@ -1,4 +1,4 @@
-if Version.match?(System.version(), ">= 1.15.0") do
+
 defmodule Color.Sigil do
   @moduledoc """
   A sigil for writing color literals in code. Import this module and
@@ -204,4 +204,4 @@ defmodule Color.Sigil do
     end
   end
 end
-end
+

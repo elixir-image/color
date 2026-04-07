@@ -416,16 +416,12 @@ defmodule Color do
     {:error, "Cannot build a color from #{inspect(other)}"}
   end
 
-  # ---- list dispatch --------------------------------------------------------
-
   defp list_to_color(list, space) do
     case Map.fetch(@space_aliases, space) do
       {:ok, canonical} -> build(canonical, list)
       :error -> {:error, "Unknown color space #{inspect(space)}"}
     end
   end
-
-  # ---- build/2 dispatch (all clauses grouped) -----------------------------
 
   # Strict RGB-like
   defp build(:srgb, list), do: strict_rgb(list, Color.SRGB, "sRGB")
@@ -498,8 +494,6 @@ defmodule Color do
   defp build(other, _list) do
     {:error, "Unknown color space #{inspect(other)}"}
   end
-
-  # ---- strict RGB-like builders --------------------------------------------
 
   defp strict_rgb(list, module, label) when length(list) in [3, 4] do
     cond do
@@ -598,8 +592,6 @@ defmodule Color do
     {:error, "#{label} expects a list of 3 or 4 numbers, got #{length(list)}: #{inspect(list)}"}
   end
 
-  # ---- permissive builders -------------------------------------------------
-
   defp permissive_3(list, module, label, [k1, k2, k3], extras) when length(list) in [3, 4] do
     with {:ok, [v1, v2, v3 | rest]} <- permissive_list(list, label) do
       alpha = List.first(rest)
@@ -643,8 +635,6 @@ defmodule Color do
     end
   end
 
-  # ---- field helpers -------------------------------------------------------
-
   defp rgb_fields([r, g, b]), do: [r: r, g: g, b: b]
   defp rgb_fields([r, g, b, a]), do: [r: r, g: g, b: b, alpha: a]
 
@@ -658,8 +648,6 @@ defmodule Color do
   defp sl_fields([s, l]), do: [s: s, l: l]
 
   defp normalise_ints(list, max), do: Enum.map(list, fn n -> n / max end)
-
-  # ---- shared validators / normalisers -------------------------------------
 
   defp check_int_range(list, lo, hi, label) do
     if Enum.all?(list, fn n -> n >= lo and n <= hi end) do
