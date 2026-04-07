@@ -1,9 +1,9 @@
 defmodule Color.Tristimulus do
-  import Nx.Defn
+  @moduledoc """
+  Illuminant reference white data. All values are stored as plain lists
+  of floats — the library does not require `Nx`.
 
-  @doc false
-
-  # https://www.easyrgb.com/en/math.php
+  """
 
   @observer_angles [2, 10]
 
@@ -11,6 +11,25 @@ defmodule Color.Tristimulus do
     @observer_angles
   end
 
+  @doc """
+  Returns the reference white for an illuminant as a three-element list
+  `[Xr, Yr, Zr]` of floats.
+
+  ### Arguments
+
+  * `options` is a keyword list.
+
+  ### Options
+
+  * `:illuminant` defaults to `:D65`.
+
+  * `:observer_angle` defaults to `2`.
+
+  ### Returns
+
+  * A list of three floats.
+
+  """
   def reference_white(options \\ []) when is_list(options) do
     illuminant = Keyword.get(options, :illuminant, :D65)
     observer_angle = Keyword.get(options, :observer_angle, 2)
@@ -19,6 +38,37 @@ defmodule Color.Tristimulus do
       {:ok, data} -> data
       {:error, reason} -> raise ArgumentError, message: reason
     end
+  end
+
+  @doc """
+  Returns the reference white for an illuminant as an `{Xr, Yr, Zr}` tuple
+  of plain floats, suitable for feeding into `Color.Conversion.Lindbloom`.
+
+  ### Arguments
+
+  * `options` is a keyword list.
+
+  ### Options
+
+  * `:illuminant` is the illuminant atom (for example `:D65`, `:D50`).
+    Defaults to `:D65`.
+
+  * `:observer_angle` is the observer angle in degrees, `2` or `10`.
+    Defaults to `2`.
+
+  ### Returns
+
+  * An `{Xr, Yr, Zr}` tuple of floats.
+
+  ### Examples
+
+      iex> Color.Tristimulus.reference_white_tuple(illuminant: :D65)
+      {0.95047, 1.0, 1.08883}
+
+  """
+  def reference_white_tuple(options \\ []) when is_list(options) do
+    [x, y, z] = reference_white(options)
+    {x, y, z}
   end
 
   @xyz_tristimulus_table """
@@ -45,15 +95,15 @@ defmodule Color.Tristimulus do
   F10      0.34609  0.35986  0.35090  0.35444  5000  # Philips TL85, Ultralume 50
   F11      0.38052  0.37713  0.38541  0.37123  4000  # Philips TL84, Ultralume 40
   F12      0.43695  0.40441  0.44256  0.39717  3000  # Philips TL83, Ultralume 30
-  LED-B1   0.4560   0.4078   _        _        2733  # phosphor-converted blue
-  LED-B2   0.4357   0.4012   _        _        2998  # phosphor-converted blue
-  LED-B3   0.3756   0.3723   _        _        4103  # phosphor-converted blue
-  LED-B4   0.3422   0.3502   _        _        5109  # phosphor-converted blue
-  LED-B5   0.3118   0.3236   _        _        6598  # phosphor-converted blue
-  LED-BH1  0.4474   0.4066   _        _        2851  # mixing of phosphor-converted blue LED and red LED (blue-hybrid)
-  LED-RGB1 0.4557   0.4211   _        _        2840  # mixing of red, green, and blue LEDs
-  LED-V1   0.4560   0.4548   _        _        2724  # phosphor-converted violet
-  LED-V2   0.3781   0.3775   _        _        4070  # phosphor-converted violet
+  LED_B1   0.4560   0.4078   _        _        2733  # phosphor_converted blue
+  LED_B2   0.4357   0.4012   _        _        2998  # phosphor_converted blue
+  LED_B3   0.3756   0.3723   _        _        4103  # phosphor_converted blue
+  LED_B4   0.3422   0.3502   _        _        5109  # phosphor_converted blue
+  LED_B5   0.3118   0.3236   _        _        6598  # phosphor_converted blue
+  LED_BH1  0.4474   0.4066   _        _        2851  # mixing of phosphor_converted blue LED and red LED (blue_hybrid)
+  LED_RGB1 0.4557   0.4211   _        _        2840  # mixing of red, green, and blue LEDs
+  LED_V1   0.4560   0.4548   _        _        2724  # phosphor_converted violet
+  LED_V2   0.3781   0.3775   _        _        4070  # phosphor-converted violet
 
   # For the following illuminants, the 10° chomaticity comes from the Python `colour_science` library
 
@@ -66,7 +116,7 @@ defmodule Color.Tristimulus do
   D60      0.32168  0.33767  0.32298  0.33927  5998  # Academy of Motion Picture Arts and Sciences
 
   # DCI P3 https://en.wikipedia.org/wiki/DCI-P3
-  P3_DCI   0.314    0.351    _        _        6300  # Non-CIE Illuminant
+  DCI      0.314    0.351    _        _        6300  # Non-CIE Illuminant
 
   """
 
@@ -75,7 +125,9 @@ defmodule Color.Tristimulus do
     Rec709: :D65,
     Rec2020: :D65,
     Cinema_Gamut: :D65,
-    P3_DCI_P: :P3_DCI,
+    P3_DCI_P: :DCI,
+    P3_DCI: :DCI,
+    DCI_P: :DCI,
     ACES: :D60
   }
 
@@ -95,6 +147,25 @@ defmodule Color.Tristimulus do
     @illuminants
   end
 
+  # Canonical XYZ values published by Bruce Lindbloom
+  # (http://www.brucelindbloom.com/index.html?WorkingSpaceInfo.html).
+  # These are authoritative for the 2° observer and are used in place of
+  # values computed from the chromaticity table so that sRGB and other
+  # Lindbloom-based math reproduces his published numbers exactly.
+  @lindbloom_overrides_2 %{
+    A: [1.09850, 1.00000, 0.35585],
+    B: [0.99072, 1.00000, 0.85223],
+    C: [0.98074, 1.00000, 1.18232],
+    D50: [0.96422, 1.00000, 0.82521],
+    D55: [0.95682, 1.00000, 0.92149],
+    D65: [0.95047, 1.00000, 1.08883],
+    D75: [0.94972, 1.00000, 1.22638],
+    E: [1.00000, 1.00000, 1.00000],
+    F2: [0.99186, 1.00000, 0.67393],
+    F7: [0.95041, 1.00000, 1.08747],
+    F11: [1.00962, 1.00000, 0.64350]
+  }
+
   @xyz_tristimulus @xyz_tristimulus_table
     |> String.split("\n", trim: true)
     |> Enum.reject(&String.starts_with?(&1, "#"))
@@ -112,23 +183,30 @@ defmodule Color.Tristimulus do
         end)
 
       [cie1931, cie1964, _cct] = Enum.chunk_every(data, 2)
-      cie1931 = Color.XYY.to_xyz_tensor(cie1931)
-      cie1964 = Color.XYY.to_xyz_tensor(cie1964)
+      atom = String.to_atom(illuminant)
+
+      cie1931 =
+        case Map.fetch(@lindbloom_overrides_2, atom) do
+          {:ok, xyz} -> xyz
+          :error -> Color.XYY.to_xyz_list(cie1931)
+        end
+
+      cie1964 = Color.XYY.to_xyz_list(cie1964)
 
       case Enum.reject([cie1931, cie1964], &is_nil/1) do
         [cie1931] ->
-          [{{String.to_atom(illuminant), 2}, cie1931}]
+          [{{atom, 2}, cie1931}]
 
         [cie1931, cie1964] ->
           [
-            {{String.to_atom(illuminant), 2}, cie1931},
-            {{String.to_atom(illuminant), 10}, cie1964}
+            {{atom, 2}, cie1931},
+            {{atom, 10}, cie1964}
           ]
       end
     end)
     |> Map.new()
 
-  defn tristimulus do
+  def tristimulus do
     @xyz_tristimulus
   end
 
@@ -147,27 +225,40 @@ defmodule Color.Tristimulus do
     end
   end
 
-  defp validate_illuminant(illuminant) when illuminant in @illuminants do
+  def validate_illuminant(illuminant) when illuminant in @illuminants do
     {:ok, illuminant}
   end
 
-  defp validate_illuminant(illuminant) when illuminant in @illumimant_alias_names do
+  def validate_illuminant(illuminant) when illuminant in @illumimant_alias_names do
     {:ok, Map.fetch!(@illuminant_aliases, illuminant)}
   end
 
-  defp validate_illuminant(illuminant) do
-    {:error,
-     "Invalid illuminant #{inspect(illuminant)}.  " <>
-       "Valid illuminants are #{inspect(@illuminants)}"}
+  def validate_illuminant(illuminant) when is_binary(illuminant) do
+    illuminant
+    |> String.upcase()
+    |> String.replace(["-", " "], "_")
+    |> String.to_existing_atom()
+    |> validate_illuminant
+  rescue ArgumentError ->
+    {:error, invalid_illuminant_error(illuminant)}
   end
 
-  defp validate_observer_angle(observer_angle) when observer_angle in @observer_angles do
+  def validate_illuminant(illuminant) do
+    {:error, invalid_illuminant_error(illuminant)}
+  end
+
+  def validate_observer_angle(observer_angle) when observer_angle in @observer_angles do
     {:ok, observer_angle}
   end
 
-  defp validate_observer_angle(observer_angle) do
+  def validate_observer_angle(observer_angle) do
     {:error,
-     "Unknown observer angle #{inspect(observer_angle)}. " <>
+     "Unknown observer angle #{inspect(observer_angle)}°. " <>
        "Valid observer angles are #{inspect(@observer_angles)}"}
+  end
+
+  def invalid_illuminant_error(illuminant) do
+    "Invalid illuminant #{inspect(illuminant)}.  " <>
+      "Valid illuminants are #{inspect(@illuminants)}"
   end
 end

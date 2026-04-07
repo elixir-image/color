@@ -1,5 +1,8 @@
 defmodule Color.RGB.WorkingSpace do
 
+  # RGB Observer angle is CIE1931 2°
+  @rgb_observer_angle 2
+
   @rgb_working_space_table """
   # Name    Gamma WP     xr      yr       Yr       xg     yg       Yg        xb      yb      bY
 
@@ -51,7 +54,7 @@ defmodule Color.RGB.WorkingSpace do
     |> String.split("\n", trim: true)
     |> Enum.reject(&String.starts_with?(&1, "#"))
     |> Enum.map(fn line ->
-      [working_space, gamma, white_point | data] =
+      [working_space, gamma, illuminant | data] =
         line
         |> String.split("#")
         |> hd()
@@ -63,14 +66,74 @@ defmodule Color.RGB.WorkingSpace do
           end
         end)
 
+      {:ok, illuminant} = Color.Tristimulus.validate_illuminant(illuminant)
       [ρ, γ, β] = Enum.chunk_every(data, 3)
-      data = %{gamma: gamma, white_point: white_point, ρ: ρ, γ: γ, β: β}
+      data = %{gamma: gamma, illuminant: illuminant, ρ: ρ, γ: γ, β: β}
 
       {String.to_atom(working_space), data}
     end)
     |> Map.new()
 
+  @rgb_working_space_names Map.keys(@rgb_working_space)
+
   def rgb_working_spaces do
     @rgb_working_space
+  end
+
+  @doc """
+  Returns the RGB→XYZ and XYZ→RGB conversion matrices for a named RGB
+  working space, computed from its primaries and reference white using
+  the Lindbloom formulas.
+
+  ### Arguments
+
+  * `rgb_space` is the working-space atom (for example `:sRGB`, `:Adobe`,
+    `:ProPhoto`).
+
+  ### Returns
+
+  * An `{:ok, %{to_xyz: m, from_xyz: mi, illuminant: atom, observer_angle: 2}}`
+    tuple where `m` and `mi` are 3x3 matrices represented as lists of rows.
+
+  * `{:error, reason}` when the working space is unknown.
+
+  ### Examples
+
+      iex> {:ok, %{to_xyz: [[a, _, _] | _]}} = Color.RGB.WorkingSpace.rgb_conversion_matrix(:SRGB)
+      iex> Float.round(a, 4)
+      0.4125
+
+  """
+  def rgb_conversion_matrix(rgb_space) when rgb_space in @rgb_working_space_names do
+    {:ok, working_space} = Map.fetch(rgb_working_spaces(), rgb_space)
+
+    primaries = {
+      List.to_tuple(Enum.take(working_space.ρ, 2)),
+      List.to_tuple(Enum.take(working_space.γ, 2)),
+      List.to_tuple(Enum.take(working_space.β, 2))
+    }
+
+    wr = Color.Tristimulus.reference_white_tuple(
+      illuminant: working_space.illuminant,
+      observer_angle: @rgb_observer_angle
+    )
+
+    m = Color.Conversion.Lindbloom.working_space_matrix(primaries, wr)
+    mi = Color.Conversion.Lindbloom.invert3(m)
+
+    {:ok,
+     %{
+       to_xyz: m,
+       from_xyz: mi,
+       illuminant: working_space.illuminant,
+       observer_angle: @rgb_observer_angle,
+       gamma: working_space.gamma
+     }}
+  end
+
+  def rgb_conversion_matrix(rgb_space) do
+    {:error,
+     "Unknown RGB working space #{inspect(rgb_space)}. " <>
+       "Valid spaces are #{inspect(@rgb_working_space_names)}"}
   end
 end
