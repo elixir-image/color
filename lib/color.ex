@@ -709,6 +709,43 @@ defmodule Color do
 
   * `target` is the target module (for example `Color.Lab`, `Color.SRGB`).
 
+  * `options` is a keyword list — see below.
+
+  ### Options
+
+  * `:intent` — the ICC rendering intent. One of:
+
+    * `:relative_colorimetric` (default) — chromatically adapt the
+      source white to the target white using Bradford. Out-of-gamut
+      colors are **not** altered; any clipping is left to the caller
+      or deferred to a later step. This matches the current
+      default behaviour.
+
+    * `:absolute_colorimetric` — **no** chromatic adaptation. The
+      source XYZ is handed to the target's `from_xyz/1` verbatim.
+      Use this when you want to preserve the exact XYZ values
+      regardless of reference-white mismatch.
+
+    * `:perceptual` — chromatically adapt **and** gamut-map so the
+      result is inside the target's gamut (when the target has a
+      gamut, i.e. an RGB working space). The gamut-mapping algorithm
+      is CSS Color 4's Oklch binary search (same as
+      `Color.Gamut.to_gamut/3` with `method: :oklch`).
+
+    * `:saturation` — currently an alias for `:perceptual`. Treated
+      as a gamut-compressing intent. (A true "saturation" intent
+      that preserves chroma at the cost of hue shift is deferred to
+      a future version.)
+
+  * `:bpc` — `true` to apply black point compensation after chromatic
+    adaptation, `false` (default) to skip it. See
+    `Color.XYZ.apply_bpc/3`.
+
+  * `:adaptation` — the chromatic adaptation method used by
+    `:relative_colorimetric` and `:perceptual`. One of `:bradford`
+    (default), `:xyz_scaling`, `:von_kries`, `:sharp`, `:cmccat2000`,
+    `:cat02`.
+
   ### Returns
 
   * `{:ok, %target{}}` on success.
@@ -737,36 +774,38 @@ defmodule Color do
       iex> c.alpha
       0.5
 
+  Wide-gamut Display P3 red gamut-mapped into sRGB via the
+  `:perceptual` intent:
+
+      iex> p3_red = %Color.RGB{r: 1.0, g: 0.0, b: 0.0, working_space: :P3_D65}
+      iex> {:ok, mapped} = Color.convert(p3_red, Color.SRGB, intent: :perceptual)
+      iex> Color.Gamut.in_gamut?(mapped, :SRGB)
+      true
+
   """
-  def convert(color, target) when target in @xyz_hub do
-    with {:ok, color} <- new(color),
-         {:ok, xyz} <- to_xyz(color),
-         {:ok, xyz} <- adapt_for(xyz, target) do
-      target.from_xyz(xyz)
-    end
-  end
+  def convert(color, target), do: do_convert(color, target, nil, [])
 
-  def convert(_color, Color.RGB) do
-    {:error,
-     "Color.RGB needs a working space. Use convert/3 with the " <>
-       "working_space atom as the third argument."}
-  end
+  def convert(color, Color.RGB, working_space) when is_atom(working_space),
+    do: do_convert(color, Color.RGB, working_space, [])
 
-  def convert(_color, target) do
-    {:error, "Unsupported target color module #{inspect(target)}"}
-  end
+  def convert(color, target, options) when is_list(options),
+    do: do_convert(color, target, nil, options)
 
   @doc """
-  Converts a color to `Color.RGB` (linear) in the given working space.
+  Converts a color to `Color.RGB` (linear) in the given working space
+  with rendering-intent options.
 
   ### Arguments
 
-  * `color` is any supported color struct.
+  * `color` is any supported color struct or input accepted by `new/1`.
 
   * `target` must be `Color.RGB`.
 
-  * `working_space` is an atom naming an RGB working space (for example
-    `:SRGB`, `:Adobe`, `:ProPhoto`).
+  * `working_space` is an atom naming an RGB working space (for
+    example `:SRGB`, `:Adobe`, `:ProPhoto`).
+
+  * `options` is the same keyword list as `convert/3`, supporting
+    `:intent`, `:bpc`, and `:adaptation`.
 
   ### Returns
 
@@ -779,24 +818,114 @@ defmodule Color do
       {1.0, 1.0, 1.0}
 
   """
-  def convert(color, Color.RGB, working_space) do
+  def convert(color, Color.RGB, working_space, options)
+      when is_atom(working_space) and is_list(options) do
+    do_convert(color, Color.RGB, working_space, options)
+  end
+
+  defp do_convert(_color, Color.RGB, nil, _options) do
+    {:error,
+     "Color.RGB needs a working space. Use convert(color, Color.RGB, :SRGB) " <>
+       "or convert(color, Color.RGB, :Rec2020, intent: :perceptual)."}
+  end
+
+  defp do_convert(color, Color.RGB, working_space, options) do
+    intent = Keyword.get(options, :intent, :relative_colorimetric)
+    bpc = Keyword.get(options, :bpc, false)
+    method = Keyword.get(options, :adaptation, :bradford)
+
     with {:ok, info} <- Color.RGB.WorkingSpace.rgb_conversion_matrix(working_space),
          {:ok, color} <- new(color),
          {:ok, xyz} <- to_xyz(color),
          {:ok, xyz} <-
-           Color.XYZ.adapt(xyz, info.illuminant, observer_angle: info.observer_angle) do
-      Color.RGB.from_xyz(xyz, working_space)
+           adapt_xyz(xyz, info.illuminant, info.observer_angle, intent, method, bpc),
+         {:ok, converted} <- Color.RGB.from_xyz(xyz, working_space) do
+      apply_intent_gamut_rgb(converted, intent, working_space)
     end
   end
 
-  defp adapt_for(%Color.XYZ{} = xyz, target) do
-    case Map.get(@fixed_illuminant, target) do
-      nil ->
+  defp do_convert(color, target, _, options) when target in @xyz_hub do
+    intent = Keyword.get(options, :intent, :relative_colorimetric)
+    bpc = Keyword.get(options, :bpc, false)
+    method = Keyword.get(options, :adaptation, :bradford)
+
+    with {:ok, color} <- new(color),
+         {:ok, xyz} <- to_xyz(color),
+         {:ok, xyz} <- adapt_for(xyz, target, intent, method, bpc),
+         {:ok, converted} <- target.from_xyz(xyz) do
+      apply_intent_gamut(converted, intent, target)
+    end
+  end
+
+  defp do_convert(_color, target, _, _options) do
+    {:error, "Unsupported target color module #{inspect(target)}"}
+  end
+
+  # Called from convert/3 for non-RGB targets.
+  defp adapt_for(%Color.XYZ{} = xyz, target, intent, method, bpc) do
+    case {intent, Map.get(@fixed_illuminant, target)} do
+      {:absolute_colorimetric, _} ->
         {:ok, xyz}
 
-      {ill, obs} ->
-        Color.XYZ.adapt(xyz, ill, observer_angle: obs)
+      {_, nil} ->
+        {:ok, xyz}
+
+      {_, {illuminant, observer}} ->
+        adapt_xyz(xyz, illuminant, observer, intent, method, bpc)
     end
+  end
+
+  defp adapt_xyz(xyz, dest_illuminant, dest_observer, intent, method, bpc) do
+    case intent do
+      :absolute_colorimetric ->
+        {:ok, xyz}
+
+      _ ->
+        with {:ok, adapted} <-
+               Color.XYZ.adapt(xyz, dest_illuminant,
+                 observer_angle: dest_observer,
+                 method: method
+               ) do
+          if bpc do
+            {:ok, Color.XYZ.apply_bpc(adapted, 0.0, 0.0)}
+          else
+            {:ok, adapted}
+          end
+        end
+    end
+  end
+
+  # For non-RGB targets: perceptual / saturation intents gamut-map
+  # into sRGB as the de-facto display gamut.
+  defp apply_intent_gamut(converted, intent, _target)
+       when intent in [:relative_colorimetric, :absolute_colorimetric] do
+    {:ok, converted}
+  end
+
+  defp apply_intent_gamut(converted, intent, target)
+       when intent in [:perceptual, :saturation] do
+    # For RGB-like targets we gamut-map directly into that target's
+    # working space. For perceptual spaces (Lab, Oklch, etc.) we
+    # leave the value unchanged — those spaces have no gamut.
+    case target do
+      Color.SRGB -> to_gamut_srgb(converted, :SRGB)
+      Color.AdobeRGB -> to_gamut_srgb(converted, :Adobe)
+      _ -> {:ok, converted}
+    end
+  end
+
+  defp apply_intent_gamut_rgb(rgb, intent, _working_space)
+       when intent in [:relative_colorimetric, :absolute_colorimetric] do
+    {:ok, rgb}
+  end
+
+  defp apply_intent_gamut_rgb(rgb, intent, working_space)
+       when intent in [:perceptual, :saturation] do
+    Color.Gamut.to_gamut(rgb, working_space, method: :oklch)
+  end
+
+  defp to_gamut_srgb(converted, working_space) do
+    Color.Gamut.to_gamut(converted, working_space, method: :oklch)
   end
 
   @doc """
@@ -913,5 +1042,187 @@ defmodule Color do
     raise ArgumentError,
           "unpremultiply/1 is only supported for Color.SRGB, Color.AdobeRGB and " <>
             "Color.RGB (linear). Got #{inspect(struct)}."
+  end
+
+  @doc """
+  Returns the WCAG 2.x relative luminance of a color — the CIE `Y`
+  component of its linear sRGB, on the `[0, 1]` scale.
+
+  This is a convenience delegate to
+  `Color.Contrast.relative_luminance/1`, exposed at the top level for
+  discoverability since it's used all over the place (perceptual
+  sort, accessibility checks, threshold-based luminance picking,
+  HDR tone mapping, etc.).
+
+  ### Arguments
+
+  * `color` is anything accepted by `new/1`.
+
+  ### Returns
+
+  * A float in `[0, 1]`.
+
+  ### Examples
+
+      iex> Color.luminance("white")
+      1.0
+
+      iex> Color.luminance("black")
+      0.0
+
+      iex> Float.round(Color.luminance("red"), 4)
+      0.2126
+
+  """
+  defdelegate luminance(color), to: Color.Contrast, as: :relative_luminance
+
+  @doc """
+  Sorts a list of colors by a perceptual criterion.
+
+  ### Arguments
+
+  * `colors` is a list of anything accepted by `new/1`.
+
+  * `options` is a keyword list.
+
+  ### Options
+
+  * `:by` selects the sort key. One of:
+
+    * `:luminance` — WCAG relative luminance (default, dark → light).
+
+    * `:lightness` — CIE Lab `L*` (dark → light).
+
+    * `:oklab_l` — Oklab `L` (dark → light).
+
+    * `:chroma` — CIELCh `C*` (grey → saturated).
+
+    * `:oklch_c` — Oklch `C` (grey → saturated).
+
+    * `:hue` — CIELCh hue in degrees (red → red, around the wheel).
+
+    * `:oklch_h` — Oklch hue in degrees.
+
+    * `:hlv` — the HLV hue/luminance/value bucketing from
+      https://www.alanzucconi.com/2015/09/30/colour-sorting/ (good
+      for palette display).
+
+    * A 1-arity function that maps a color struct to a comparable
+      sort key.
+
+  * `:order` — `:asc` (default) or `:desc`.
+
+  ### Returns
+
+  * `{:ok, sorted_colors}` with each element as a `Color.SRGB` struct.
+
+  * `{:error, reason}` if any input can't be parsed.
+
+  ### Examples
+
+      iex> {:ok, sorted} = Color.sort(["white", "black", "#888"], by: :luminance)
+      iex> Enum.map(sorted, &Color.SRGB.to_hex/1)
+      ["#000000", "#888888", "#ffffff"]
+
+      iex> {:ok, sorted} = Color.sort(["red", "green", "blue"], by: :hue)
+      iex> Enum.map(sorted, &Color.SRGB.to_hex/1) |> length()
+      3
+
+  """
+  def sort(colors, options \\ []) when is_list(colors) do
+    by = Keyword.get(options, :by, :luminance)
+    order = Keyword.get(options, :order, :asc)
+
+    with {:ok, srgbs} <- normalise_sort_inputs(colors) do
+      key = sort_key(by)
+      sorter = if order == :desc, do: :desc, else: :asc
+      {:ok, Enum.sort_by(srgbs, key, sorter)}
+    end
+  end
+
+  defp normalise_sort_inputs(colors) do
+    Enum.reduce_while(colors, {:ok, []}, fn c, {:ok, acc} ->
+      case convert(c, Color.SRGB) do
+        {:ok, srgb} -> {:cont, {:ok, [srgb | acc]}}
+        {:error, _} = err -> {:halt, err}
+      end
+    end)
+    |> case do
+      {:ok, list} -> {:ok, Enum.reverse(list)}
+      err -> err
+    end
+  end
+
+  defp sort_key(fun) when is_function(fun, 1), do: fun
+  defp sort_key(:luminance), do: &Color.Contrast.relative_luminance/1
+
+  defp sort_key(:lightness) do
+    fn c ->
+      {:ok, lab} = convert(c, Color.Lab)
+      lab.l
+    end
+  end
+
+  defp sort_key(:oklab_l) do
+    fn c ->
+      {:ok, ok} = convert(c, Color.Oklab)
+      ok.l
+    end
+  end
+
+  defp sort_key(:chroma) do
+    fn c ->
+      {:ok, lch} = convert(c, Color.LCHab)
+      lch.c
+    end
+  end
+
+  defp sort_key(:oklch_c) do
+    fn c ->
+      {:ok, oklch} = convert(c, Color.Oklch)
+      oklch.c
+    end
+  end
+
+  defp sort_key(:hue) do
+    fn c ->
+      {:ok, lch} = convert(c, Color.LCHab)
+      lch.h
+    end
+  end
+
+  defp sort_key(:oklch_h) do
+    fn c ->
+      {:ok, oklch} = convert(c, Color.Oklch)
+      oklch.h
+    end
+  end
+
+  # Zucconi's HLV bucket sort — rounds hue/lightness/value into coarse
+  # buckets so colors cluster into visually-related groups.
+  defp sort_key(:hlv) do
+    fn c ->
+      reps = 8
+
+      {:ok, hsv} = convert(c, Color.Hsv)
+      lum = :math.sqrt(0.241 * c.r + 0.691 * c.g + 0.068 * c.b)
+      h2 = trunc(hsv.h * reps)
+      lum2 = trunc(lum * reps)
+      v2 = trunc(hsv.v * reps)
+
+      # Reverse the value within odd hue buckets so the sort
+      # alternates direction — this is the trick that turns the
+      # sequence into a pleasing perceptual gradient.
+      lum2 = if rem(h2, 2) == 1, do: reps - lum2, else: lum2
+      v2 = if rem(h2, 2) == 1, do: reps - v2, else: v2
+      {h2, lum2, v2}
+    end
+  end
+
+  defp sort_key(other) do
+    raise ArgumentError,
+          "Unknown sort key #{inspect(other)}. Valid keys: :luminance, " <>
+            ":lightness, :oklab_l, :chroma, :oklch_c, :hue, :oklch_h, :hlv, " <>
+            "or a 1-arity function."
   end
 end

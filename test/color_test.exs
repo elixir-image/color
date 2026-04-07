@@ -29,6 +29,7 @@ defmodule ColorTest do
   doctest Color.CAM16UCS
   doctest Color.CSSNames
   doctest Color.Contrast
+  doctest Color.Spectral
   doctest Color.Mix
   doctest Color.Gamut
   doctest Color.Harmony
@@ -678,6 +679,175 @@ defmodule ColorTest do
     test "Color.RGB.WorkingSpace CSS name round-trip" do
       assert {:ok, :P3_D65} = Color.RGB.WorkingSpace.from_css_name("display-p3")
       assert Color.RGB.WorkingSpace.to_css_name(:P3_D65) == "display-p3"
+    end
+  end
+
+  describe "Tier 2 features" do
+    test "Color.luminance/1 delegates to Color.Contrast.relative_luminance/1" do
+      assert Color.luminance("white") == 1.0
+      assert Color.luminance("black") == 0.0
+      assert_in_delta Color.luminance("red"), 0.2126, 1.0e-4
+    end
+
+    test "Color.sort/2 by luminance" do
+      {:ok, sorted} = Color.sort(["white", "black", "#888"], by: :luminance)
+      assert Enum.map(sorted, &Color.SRGB.to_hex/1) == ["#000000", "#888888", "#ffffff"]
+    end
+
+    test "Color.sort/2 order: :desc reverses the order" do
+      {:ok, sorted} = Color.sort(["white", "black", "#888"], by: :luminance, order: :desc)
+      assert_in_delta List.first(sorted).r, 1.0, 1.0e-10
+    end
+
+    test "Color.sort/2 by lightness uses Lab L*" do
+      {:ok, sorted} = Color.sort(["red", "green", "blue"], by: :lightness)
+      lightnesses =
+        Enum.map(sorted, fn c ->
+          {:ok, lab} = Color.convert(c, Color.Lab)
+          lab.l
+        end)
+
+      assert lightnesses == Enum.sort(lightnesses)
+    end
+
+    test "Color.sort/2 with custom function" do
+      # Sort by blue channel descending.
+      {:ok, sorted} = Color.sort(["red", "blue", "green"], by: fn c -> -c.b end)
+      assert_in_delta List.first(sorted).b, 1.0, 1.0e-10
+    end
+
+    test "Color.sort/2 errors on unknown :by preset" do
+      assert_raise ArgumentError, ~r/Unknown sort key/, fn ->
+        Color.sort(["red"], by: :nonsense)
+      end
+    end
+
+    test "rendering intent :absolute_colorimetric bypasses chromatic adaptation" do
+      # Lab tagged D50 vs D65 should give different sRGB with the
+      # default :relative_colorimetric intent but identical sRGB with
+      # :absolute_colorimetric (because the XYZ values are the same,
+      # just differently-interpreted).
+      lab = %Color.Lab{l: 50.0, a: 20.0, b: -10.0, illuminant: :D50}
+
+      {:ok, rel} = Color.convert(lab, Color.SRGB)
+      {:ok, abs} = Color.convert(lab, Color.SRGB, intent: :absolute_colorimetric)
+
+      # They should differ because one adapts D50 → D65 and the other doesn't.
+      refute_in_delta rel.r, abs.r, 1.0e-4
+    end
+
+    test "rendering intent :perceptual gamut-maps Display P3 into sRGB" do
+      p3_red = %Color.RGB{r: 1.0, g: 0.0, b: 0.0, working_space: :P3_D65}
+
+      {:ok, mapped} = Color.convert(p3_red, Color.SRGB, intent: :perceptual)
+      assert Color.Gamut.in_gamut?(mapped, :SRGB)
+
+      # Without the intent, the sRGB result is out-of-gamut (r > 1).
+      {:ok, clipped_linear} = Color.convert(p3_red, Color.RGB, :SRGB)
+      refute clipped_linear.r <= 1.0 + 1.0e-5
+    end
+
+    test "rendering intent :perceptual into Color.RGB works" do
+      p3_red = %Color.RGB{r: 1.0, g: 0.0, b: 0.0, working_space: :P3_D65}
+
+      {:ok, mapped} = Color.convert(p3_red, Color.RGB, :SRGB, intent: :perceptual)
+      assert mapped.r <= 1.0 + 1.0e-5
+      assert mapped.g >= -1.0e-5
+      assert mapped.b >= -1.0e-5
+    end
+
+    test "Color.XYZ.apply_bpc/3 is identity when black points match" do
+      xyz = %Color.XYZ{x: 0.5, y: 0.4, z: 0.3, illuminant: :D65}
+      assert Color.XYZ.apply_bpc(xyz, 0.0, 0.0) == xyz
+      assert Color.XYZ.apply_bpc(xyz, 0.05, 0.05) == xyz
+    end
+
+    test "Color.XYZ.apply_bpc/3 maps source black to dest black" do
+      source_black = %Color.XYZ{x: 0.05, y: 0.05, z: 0.05, illuminant: :D65}
+      out = Color.XYZ.apply_bpc(source_black, 0.05, 0.0)
+      assert_in_delta out.x, 0.0, 1.0e-12
+      assert_in_delta out.y, 0.0, 1.0e-12
+      assert_in_delta out.z, 0.0, 1.0e-12
+    end
+
+    test "Color.XYZ.apply_bpc/3 keeps the source white fixed" do
+      white = %Color.XYZ{x: 1.0, y: 1.0, z: 1.0, illuminant: :D65}
+      out = Color.XYZ.apply_bpc(white, 0.05, 0.0)
+      assert_in_delta out.x, 1.0, 1.0e-12
+      assert_in_delta out.y, 1.0, 1.0e-12
+      assert_in_delta out.z, 1.0, 1.0e-12
+    end
+
+    test "Color.Spectral emissive SPD → XYZ for every built-in illuminant" do
+      expected = %{
+        D65: {0.9504, 1.0, 1.0888},
+        D50: {0.9642, 1.0, 0.8251},
+        A: {1.0985, 1.0, 0.3558},
+        E: {1.0, 1.0, 1.0}
+      }
+
+      for {name, {ex, ey, ez}} <- expected do
+        spd = Color.Spectral.illuminant(name)
+        {:ok, xyz} = Color.Spectral.to_xyz(spd, illuminant: name)
+        assert_in_delta xyz.x, ex, 1.0e-3, "#{name} x"
+        assert_in_delta xyz.y, ey, 1.0e-3, "#{name} y"
+        assert_in_delta xyz.z, ez, 1.0e-3, "#{name} z"
+      end
+    end
+
+    test "Color.Spectral perfect diffuser matches the illuminant's white point" do
+      perfect = %Color.Spectral{
+        wavelengths: Color.Spectral.Tables.wavelengths(),
+        values: List.duplicate(1.0, 81)
+      }
+
+      {:ok, d65} = Color.Spectral.reflectance_to_xyz(perfect, :D65)
+      assert_in_delta d65.x, 0.9504, 1.0e-3
+      assert_in_delta d65.z, 1.0888, 1.0e-3
+
+      {:ok, d50} = Color.Spectral.reflectance_to_xyz(perfect, :D50)
+      assert_in_delta d50.x, 0.9642, 1.0e-3
+      assert_in_delta d50.z, 0.8251, 1.0e-3
+    end
+
+    test "Color.Spectral 10° observer differs from 2° observer" do
+      perfect = %Color.Spectral{
+        wavelengths: Color.Spectral.Tables.wavelengths(),
+        values: List.duplicate(1.0, 81)
+      }
+
+      {:ok, xyz2} = Color.Spectral.reflectance_to_xyz(perfect, :D65, observer: 2)
+      {:ok, xyz10} = Color.Spectral.reflectance_to_xyz(perfect, :D65, observer: 10)
+
+      # The 10° observer gives different chromaticity because the
+      # CMFs are different.
+      refute_in_delta xyz2.x, xyz10.x, 1.0e-5
+    end
+
+    test "Color.Spectral.metamerism/4 is zero for identical samples" do
+      sample = %Color.Spectral{
+        wavelengths: Color.Spectral.Tables.wavelengths(),
+        values: List.duplicate(0.5, 81)
+      }
+
+      {:ok, de} = Color.Spectral.metamerism(sample, sample, :D65, :A)
+      assert de == 0.0
+    end
+
+    test "Color.Spectral linear resample onto sparser grid" do
+      # A sparse 50 nm-spaced source, resampled onto the 5 nm grid.
+      sparse = %Color.Spectral{
+        wavelengths: [400.0, 500.0, 600.0, 700.0],
+        values: [0.0, 1.0, 1.0, 0.0]
+      }
+
+      resampled = Color.Spectral.resample(sparse, [400.0, 450.0, 500.0, 550.0, 600.0, 650.0, 700.0])
+
+      assert Enum.at(resampled, 0) == 0.0
+      assert Enum.at(resampled, 1) == 0.5
+      assert Enum.at(resampled, 2) == 1.0
+      assert Enum.at(resampled, 4) == 1.0
+      assert Enum.at(resampled, 6) == 0.0
     end
   end
 

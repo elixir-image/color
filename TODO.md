@@ -10,7 +10,24 @@ Tier 1 has been implemented — see `Color.Contrast`, `Color.Mix`,
 `Color.Blend`, and the reverse lookups on `Color.CSSNames` and
 `Color.RGB.WorkingSpace`.
 
-## Tier 2 — valuable, more work
+Tier 2 items marked ✅ below have been implemented:
+
+* ✅ Rendering intents in `Color.convert/2,3,4`
+  (`:relative_colorimetric`, `:absolute_colorimetric`, `:perceptual`,
+  `:saturation`, plus `:adaptation` method selection).
+* ✅ Black point compensation via `Color.XYZ.apply_bpc/3` and the
+  `bpc: true` option on `Color.convert`.
+* ✅ Spectral reflectance / SPDs — see `Color.Spectral` and
+  `Color.Spectral.Tables` (CIE 1931 2° and CIE 1964 10° CMFs, D65,
+  D50, A, E illuminants, emissive and reflective integration,
+  metamerism helper).
+* ✅ `Color.luminance/1` at the top level, delegating to
+  `Color.Contrast.relative_luminance/1`.
+* ✅ `Color.sort/2` with `:by` presets (`:luminance`, `:lightness`,
+  `:oklab_l`, `:chroma`, `:oklch_c`, `:hue`, `:oklch_h`, `:hlv`) or
+  a custom sort-key function, plus `:order`.
+
+## Tier 2 — remaining
 
 ### ICC matrix-profile reading
 
@@ -24,21 +41,6 @@ alone are ~500–1000 LOC.
 
 Suggested module: `Color.ICC.Profile`.
 
-### Rendering intents in `Color.convert/2`
-
-Wire `:absolute_colorimetric | :relative_colorimetric | :perceptual |
-:saturation` into `convert/2` as an option. `:relative_colorimetric` is
-today's default behaviour (Bradford adapt + no gamut clip).
-`:perceptual` should route out-of-gamut colors through
-`Color.Gamut.to_gamut/2,3`. `:saturation` would preserve chroma at the
-cost of hue shift. `:absolute` disables adaptation entirely.
-
-### Black point compensation
-
-Optional flag on rendering intents that matches the darkest black
-between the source and destination so shadow detail isn't crushed.
-Small on top of ICC + rendering intents.
-
 ### Batch conversion API
 
 `Color.convert_many/2` that takes a list (or stream) of colors and
@@ -46,26 +48,6 @@ applies one conversion. The hot-path should skip per-call overhead:
 compute matrices once, then fold over the list. Genuinely fast for
 megapixel-scale work. An optional `:nx` dep could re-enter here purely
 for the batched path if it ever proves measurably better on large N.
-
-### Spectral reflectance / SPDs
-
-Load illuminant spectral power distributions (D65, A, F-series) and
-object spectral reflectances. Enables metamer detection — two colors
-that match under one light and diverge under another. Niche outside
-paint/print/science work.
-
-Suggested module: `Color.Spectral`.
-
-### Relative luminance helper (additional contexts)
-
-`Color.luminance/1` is already in `Color.Contrast` as
-`relative_luminance/1`; consider also exposing it at the top level for
-discoverability.
-
-### Sort / rank by perceptual criteria
-
-`Color.sort/2` with `:by` options like `:lightness`, `:chroma`,
-`:hue`, `:hlv` (matches the algorithm Image.Color.sort/2 uses today).
 
 ## Tier 3 — domain-specific or niche
 

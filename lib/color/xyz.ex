@@ -112,6 +112,71 @@ defmodule Color.XYZ do
     end
   end
 
+  @doc """
+  Applies black point compensation (BPC) to an `XYZ` color.
+
+  BPC rescales the XYZ such that the source's darkest reproducible
+  black maps to the destination's darkest reproducible black, so
+  that shadow detail is preserved across profiles with different
+  minimum luminances. Without BPC, converting from a printer profile
+  (whose darkest achievable black might be 3% of white) to a display
+  profile (which can produce pure black) leaves shadows visibly
+  lifted.
+
+  The rescale is a linear map along the achromatic axis:
+
+      Y_out = (Y_in - k_src) · (1 - k_dst) / (1 - k_src) + k_dst
+
+  and `X` / `Z` are rescaled by the same factor so chromaticity is
+  preserved.
+
+  This library does not currently read ICC profiles, so in most
+  workflows both black points default to `0.0` and `apply_bpc/3`
+  becomes an identity. It is provided for explicit use in
+  ICC-aware pipelines and for completeness of the rendering-intent
+  API (see `Color.convert/3` with `bpc: true`).
+
+  ### Arguments
+
+  * `xyz` is a `Color.XYZ` struct.
+
+  * `source_bp` is the source black point as a relative luminance
+    (`Y`) in `[0.0, 1.0]`.
+
+  * `dest_bp` is the destination black point as a relative luminance.
+
+  ### Returns
+
+  * A new `Color.XYZ` struct with the compensation applied.
+
+  ### Examples
+
+      iex> xyz = %Color.XYZ{x: 0.5, y: 0.5, z: 0.5, illuminant: :D65}
+      iex> Color.XYZ.apply_bpc(xyz, 0.0, 0.0) == xyz
+      true
+
+      iex> xyz = %Color.XYZ{x: 0.1, y: 0.1, z: 0.1, illuminant: :D65}
+      iex> out = Color.XYZ.apply_bpc(xyz, 0.05, 0.0)
+      iex> Float.round(out.y, 6)
+      0.052632
+
+  """
+  def apply_bpc(%__MODULE__{} = xyz, source_bp, dest_bp)
+      when is_number(source_bp) and is_number(dest_bp) do
+    if source_bp == dest_bp do
+      xyz
+    else
+      factor = (1 - dest_bp) / (1 - source_bp)
+
+      %{
+        xyz
+        | x: (xyz.x - source_bp) * factor + dest_bp,
+          y: (xyz.y - source_bp) * factor + dest_bp,
+          z: (xyz.z - source_bp) * factor + dest_bp
+      }
+    end
+  end
+
   defp cached_matrix(si, soa, di, doa, method) do
     key = {__MODULE__, :cat, si, soa, di, doa, method}
 
