@@ -24,3 +24,11 @@ color-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Tools
+mise.toml
+.tool-versions
+
+# Claude
+CLAUDE.md
+/.claude
