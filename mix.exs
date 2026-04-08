@@ -33,9 +33,7 @@ defmodule Color.MixProject do
 
   def description do
     """
-    A comprehensive color library: 21 color spaces (CIE, Oklab/Oklch,
-    JzAzBz, ICtCp, IPT, CAM16-UCS, sRGB / Adobe RGB / Display P3 /
-    Rec.2020 / ProPhoto, HSL / HSV / HSLuv, CMYK, YCbCr, …),
+    A comprehensive color library: 21 color spaces,
     chromatic adaptation, ICC rendering intents, ΔE2000 / WCAG / APCA
     contrast, gamut mapping, color mixing and gradients, blend modes,
     color harmonies, color temperature, the spectral pipeline, and a
