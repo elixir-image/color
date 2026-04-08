@@ -1583,6 +1583,122 @@ defmodule Color do
   defdelegate relative_luminance(color), to: Color.Contrast
 
   @doc """
+  Serialises a color to a CSS Color Module Level 4 string.
+
+  Accepts any input that `Color.new/1` accepts — a color struct, a
+  bare list, a hex string, a CSS named color, or an atom. String and
+  list inputs are normalised to the appropriate colour space first.
+
+  The default serialiser form follows the resulting struct type:
+
+  * `Color.SRGB` → `rgb(r g b / a)`
+
+  * `Color.Hsl` → `hsl(h s% l% / a)`
+
+  * `Color.Lab` → `lab(L% a b / a)`
+
+  * `Color.LCHab` → `lch(L% C h / a)`
+
+  * `Color.Oklab` → `oklab(L% a b / a)`
+
+  * `Color.Oklch` → `oklch(L% C h / a)`
+
+  * `Color.XYZ` → `color(xyz-d65 X Y Z / a)` (or `xyz-d50` for a
+    D50-tagged struct)
+
+  * `Color.AdobeRGB` → `color(a98-rgb r g b / a)`
+
+  * `Color.RGB` → `color(<working-space> r g b / a)` when the working
+    space has a CSS Color 4 name, otherwise `color(srgb-linear …)`
+
+  * Any other supported colour space is converted to `Color.SRGB`
+    first and emitted as `rgb(…)`.
+
+  ### Arguments
+
+  * `color` is any input accepted by `new/1`.
+
+  * `options` is a keyword list. `:as` overrides the default form
+    for RGB-family colours (`:rgb`, `:hex`, `:color`).
+
+  ### Returns
+
+  * A string.
+
+  ### Examples
+
+      iex> Color.to_css("#ff0000")
+      "rgb(255 0 0)"
+
+      iex> Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5})
+      "rgb(255 0 0 / 0.5)"
+
+      iex> Color.to_css("rebeccapurple")
+      "rgb(102 51 153)"
+
+      iex> Color.to_css(%Color.Lab{l: 50.0, a: 40.0, b: 30.0})
+      "lab(50% 40 30)"
+
+      iex> Color.to_css(%Color.Oklch{l: 0.7, c: 0.15, h: 180.0})
+      "oklch(70% 0.15 180)"
+
+      iex> Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}, as: :hex)
+      "#ff0000"
+
+  """
+  @spec to_css(input(), keyword()) :: String.t()
+  def to_css(color, options \\ []) do
+    case new(color) do
+      {:ok, struct} -> Color.CSS.to_css(struct, options)
+      {:error, exception} -> raise exception
+    end
+  end
+
+  @doc """
+  Serialises a color to a hex string, converting it to sRGB first if
+  necessary.
+
+  Accepts any input that `Color.new/1` accepts. The output form
+  follows the sRGB alpha: opaque colours return `#rrggbb`, translucent
+  colours return `#rrggbbaa`.
+
+  ### Arguments
+
+  * `color` is any input accepted by `new/1`.
+
+  ### Returns
+
+  * A string starting with `#`.
+
+  ### Examples
+
+      iex> Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0})
+      "#ff0000"
+
+      iex> Color.to_hex("rebeccapurple")
+      "#663399"
+
+      iex> Color.to_hex(%Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032})
+      "#ff0000"
+
+      iex> Color.to_hex(%Color.Oklch{l: 0.7, c: 0.15, h: 30.0})
+      "#ed7664"
+
+      iex> Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5})
+      "#ff000080"
+
+  """
+  @spec to_hex(input()) :: String.t()
+  def to_hex(color) do
+    with {:ok, source} <- new(color),
+         {:ok, srgb} <- convert(source, Color.SRGB) do
+      Color.SRGB.to_hex(srgb)
+    else
+      {:error, exception} -> raise exception
+    end
+  end
+
+  @doc """
   Sorts a list of colors by a perceptual criterion.
 
   ### Arguments

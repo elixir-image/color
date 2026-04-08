@@ -635,6 +635,70 @@ defmodule ColorTest do
     end
   end
 
+  describe "Color.to_hex/1 and Color.to_css/1,2" do
+    test "to_hex accepts any input form" do
+      assert Color.to_hex("#ff0000") == "#ff0000"
+      assert Color.to_hex("red") == "#ff0000"
+      assert Color.to_hex(:rebecca_purple) == "#663399"
+      assert Color.to_hex([1.0, 0.0, 0.0]) == "#ff0000"
+      assert Color.to_hex([255, 128, 0]) == "#ff8000"
+      assert Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}) == "#ff0000"
+    end
+
+    test "to_hex converts non-sRGB colours through sRGB first" do
+      # Lab red ≈ sRGB red
+      lab = %Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}
+      assert Color.to_hex(lab) == "#ff0000"
+    end
+
+    test "to_hex emits #rrggbbaa for translucent alpha" do
+      assert Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5}) ==
+               "#ff000080"
+    end
+
+    test "to_hex raises a typed exception on invalid input" do
+      assert_raise Color.InvalidComponentError, fn ->
+        Color.to_hex([1.5, 0.0, 0.0])
+      end
+
+      assert_raise Color.UnknownColorNameError, fn ->
+        Color.to_hex("notacolor")
+      end
+    end
+
+    test "to_css returns the canonical per-struct form" do
+      assert Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}) == "rgb(255 0 0)"
+      assert Color.to_css(%Color.Lab{l: 50.0, a: 40.0, b: 30.0}) == "lab(50% 40 30)"
+      assert Color.to_css(%Color.Oklch{l: 0.7, c: 0.15, h: 180.0}) == "oklch(70% 0.15 180)"
+    end
+
+    test "to_css accepts string + atom + list inputs via new/1" do
+      assert Color.to_css("#ff0000") == "rgb(255 0 0)"
+      assert Color.to_css("rebeccapurple") == "rgb(102 51 153)"
+      assert Color.to_css(:red) == "rgb(255 0 0)"
+      assert Color.to_css([1.0, 0.5, 0.0]) == "rgb(255 128 0)"
+      assert Color.to_css([255, 0, 0]) == "rgb(255 0 0)"
+    end
+
+    test "to_css preserves alpha" do
+      assert Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5}) ==
+               "rgb(255 0 0 / 0.5)"
+    end
+
+    test "to_css honours the :as option for sRGB" do
+      red = %Color.SRGB{r: 1.0, g: 0.0, b: 0.0}
+      assert Color.to_css(red, as: :hex) == "#ff0000"
+      assert Color.to_css(red, as: :rgb) == "rgb(255 0 0)"
+      assert Color.to_css(red, as: :color) == "color(srgb 1 0 0)"
+    end
+
+    test "to_css raises a typed exception on invalid input" do
+      assert_raise Color.InvalidComponentError, fn ->
+        Color.to_css([300, 0, 0])
+      end
+    end
+  end
+
   describe "Tier 1 features" do
     test "Color.Contrast.wcag_ratio is symmetric and clamped to [1, 21]" do
       assert_in_delta Color.Contrast.wcag_ratio("white", "black"), 21.0, 0.01
