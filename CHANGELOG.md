@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format is based on 
 
 * `Color.ANSI` module for parsing and emitting ANSI SGR colour escape sequences. Supports 16-colour, 256-colour indexed, and 24-bit truecolor forms, with perceptual nearest-palette matching (CIEDE2000) when encoding to the 16- or 256-colour palette. Includes `parse/1`, `to_string/2`, `wrap/3`, `nearest_256/1`, `nearest_16/1`, `palette_256/0`, `palette_16/0`, and a typed `Color.ANSI.ParseError` exception.
 
-* Top-level `Color.to_hex/1` and `Color.to_css/1,2` convenience functions that accept any input `Color.new/1` accepts and raise a typed exception on failure.
+* Top-level `Color.to_hex/1`, `Color.to_css/1,2`, and `Color.to_ansi/1,2` convenience functions that accept any input `Color.new/1` accepts and raise a typed exception on failure.
 
 ### Changed
 
