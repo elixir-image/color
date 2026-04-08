@@ -157,6 +157,7 @@ defmodule Color.CSS do
       Color.Oklch
 
   """
+  @spec parse(String.t()) :: {:ok, struct()} | {:error, Exception.t()}
   def parse(input) when is_binary(input) do
     trimmed = String.trim(input)
 
@@ -216,14 +217,25 @@ defmodule Color.CSS do
       "device-cmyk(0% 100% 100% 0%)"
 
   """
+  @spec to_css(struct(), keyword()) :: String.t()
   def to_css(color, options \\ [])
 
   def to_css(%Color.SRGB{} = c, options) do
     case Keyword.get(options, :as, :rgb) do
-      :rgb -> srgb_rgb(c)
-      :hex -> Color.SRGB.to_hex(c)
-      :color -> "color(srgb #{trim(c.r)} #{trim(c.g)} #{trim(c.b)}#{alpha_part(c.alpha)})"
-      other -> raise ArgumentError, "Unsupported :as #{inspect(other)} for SRGB"
+      :rgb ->
+        srgb_rgb(c)
+
+      :hex ->
+        Color.SRGB.to_hex(c)
+
+      :color ->
+        "color(srgb #{trim(c.r)} #{trim(c.g)} #{trim(c.b)}#{alpha_part(c.alpha)})"
+
+      other ->
+        raise %Color.ParseError{
+          function: "to_css",
+          reason: "unsupported :as #{inspect(other)} for SRGB"
+        }
     end
   end
 
@@ -281,7 +293,7 @@ defmodule Color.CSS do
     with {:ok, srgb} <- Color.convert(color, Color.SRGB) do
       to_css(srgb, options)
     else
-      _ -> raise ArgumentError, "Cannot serialise #{inspect(color)} to CSS"
+      _ -> raise %Color.UnsupportedTargetError{target: color}
     end
   end
 
@@ -486,6 +498,7 @@ defmodule Color.CSS do
   end
 
   defp parse_hsl([h, s, l, a], nil, bindings), do: parse_hsl([h, s, l], a, bindings)
+
   defp parse_hsl(parts, _, _),
     do: {:error, parse_error("hsl", "expects 3 components, got #{length(parts)}")}
 
@@ -656,8 +669,7 @@ defmodule Color.CSS do
           end
 
         _ ->
-          {:error,
-           parse_error("device-cmyk", "expects 4 components, got #{length(components)}")}
+          {:error, parse_error("device-cmyk", "expects 4 components, got #{length(components)}")}
       end
     end
   end
@@ -697,8 +709,7 @@ defmodule Color.CSS do
               {:ok, {module, hue_mode}}
 
             :error ->
-              {:error,
-               parse_error("color-mix", "unknown interpolation space #{inspect(space)}")}
+              {:error, parse_error("color-mix", "unknown interpolation space #{inspect(space)}")}
           end
 
         _ ->
@@ -843,8 +854,8 @@ defmodule Color.CSS do
   defp lerp(a, b, t), do: a * (1 - t) + b * t
 
   defp lerp_alpha(nil, nil, _), do: nil
-  defp lerp_alpha(a, nil, t), do: lerp(a || 1.0, 1.0, t)
-  defp lerp_alpha(nil, b, t), do: lerp(1.0, b || 1.0, t)
+  defp lerp_alpha(a, nil, t), do: lerp(a, 1.0, t)
+  defp lerp_alpha(nil, b, t), do: lerp(1.0, b, t)
   defp lerp_alpha(a, b, t), do: lerp(a, b, t)
 
   defp hue_lerp(a, b, t, mode) do
@@ -1046,7 +1057,9 @@ defmodule Color.CSS do
   # was bound in scaled units (currently used as documentation only).
   defp eval_component({:number, n}, _bindings, _scale), do: {:ok, {:number, n * 1.0}}
   defp eval_component({:percent, p}, _bindings, _scale), do: {:ok, {:percent, p * 1.0}}
-  defp eval_component({:hue, n, unit}, _bindings, _scale), do: {:ok, {:number, hue_to_deg(n, unit)}}
+
+  defp eval_component({:hue, n, unit}, _bindings, _scale),
+    do: {:ok, {:number, hue_to_deg(n, unit)}}
 
   defp eval_component({:ident, ident}, bindings, _scale) when not is_nil(bindings) do
     case Map.fetch(bindings, ident) do
@@ -1056,8 +1069,7 @@ defmodule Color.CSS do
   end
 
   defp eval_component({:ident, ident}, _bindings, _scale) do
-    {:error,
-     parse_error("Bare identifier `#{ident}` is only valid inside relative color syntax")}
+    {:error, parse_error("Bare identifier `#{ident}` is only valid inside relative color syntax")}
   end
 
   defp eval_component({:func, "calc", body}, bindings, _scale) do

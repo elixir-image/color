@@ -1,4 +1,3 @@
-
 defmodule Color.Sigil do
   @moduledoc """
   A sigil for writing color literals in code. Import this module and
@@ -124,7 +123,7 @@ defmodule Color.Sigil do
   defp parse_at_compile_time(body, []) do
     case Color.SRGB.parse(String.trim(body)) do
       {:ok, srgb} -> srgb
-      {:error, reason} -> raise ArgumentError, "~COLOR: " <> reason
+      {:error, exception} -> raise exception
     end
   end
 
@@ -168,10 +167,14 @@ defmodule Color.Sigil do
     %Color.CMYK{c: c, m: m, y: y, k: k}
   end
 
-  defp parse_at_compile_time(_body, modifiers) do
-    raise ArgumentError,
-          "~COLOR: unknown modifier #{inspect(List.to_string(modifiers))}. " <>
-            "Supported: r, b, l, o, x, h, v, k (or none for hex/CSS name)"
+  defp parse_at_compile_time(body, modifiers) do
+    raise %Color.ParseError{
+      function: "~COLOR",
+      input: body,
+      reason:
+        "unknown modifier #{inspect(List.to_string(modifiers))}. " <>
+          "Supported: r, b, l, o, x, h, v, k (or none for hex/CSS name)"
+    }
   end
 
   defp parse_floats(body, arity) do
@@ -181,14 +184,17 @@ defmodule Color.Sigil do
       |> Enum.map(&String.trim/1)
 
     if length(parts) != arity do
-      raise ArgumentError,
-            "~COLOR: expected #{arity} comma-separated values, got #{length(parts)} in #{inspect(body)}"
+      raise %Color.ParseError{
+        function: "~COLOR",
+        input: body,
+        reason: "expected #{arity} comma-separated values, got #{length(parts)}"
+      }
     end
 
-    Enum.map(parts, &parse_number!/1)
+    Enum.map(parts, &parse_number!(&1, body))
   end
 
-  defp parse_number!(s) do
+  defp parse_number!(s, body) do
     case Float.parse(s) do
       {n, ""} ->
         n
@@ -198,10 +204,16 @@ defmodule Color.Sigil do
 
       :error ->
         case Integer.parse(s) do
-          {n, ""} -> n * 1.0
-          _ -> raise ArgumentError, "~COLOR: invalid number #{inspect(s)}"
+          {n, ""} ->
+            n * 1.0
+
+          _ ->
+            raise %Color.ParseError{
+              function: "~COLOR",
+              input: body,
+              reason: "invalid number #{inspect(s)}"
+            }
         end
     end
   end
 end
-

@@ -18,9 +18,24 @@ defmodule Color.ICtCp do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:i, :ct, :cp, :alpha, transfer: :pq]
+
+  @typedoc """
+  An ITP (ICtCp) colour for HDR signals (Rec. 2100). `i` is intensity,
+  `ct` and `cp` are the tritan / protan chroma channels. The
+  `:transfer` field selects PQ (`:pq`, the default) or HLG (`:hlg`).
+  """
+  @type t :: %__MODULE__{
+          i: float() | nil,
+          ct: float() | nil,
+          cp: float() | nil,
+          alpha: Color.Types.alpha(),
+          transfer: :pq | :hlg
+        }
 
   # Rec.2020 linear RGB -> LMS (from BT.2100)
   @rgb_to_lms [

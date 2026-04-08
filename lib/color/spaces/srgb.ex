@@ -10,9 +10,18 @@ defmodule Color.SRGB do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:r, :g, :b, :alpha]
+
+  @type t :: %__MODULE__{
+          r: number() | nil,
+          g: number() | nil,
+          b: number() | nil,
+          alpha: number() | nil
+        }
 
   {:ok, info} = Color.RGB.WorkingSpace.rgb_conversion_matrix(:SRGB)
   @to_xyz_matrix info.to_xyz
@@ -39,6 +48,7 @@ defmodule Color.SRGB do
       {0.9505, 1.0, 1.0888}
 
   """
+  @spec to_xyz(t()) :: {:ok, Color.XYZ.t()}
   def to_xyz(%__MODULE__{r: r, g: g, b: b, alpha: alpha}) do
     linear = {
       Lindbloom.srgb_inverse_compand(r),
@@ -82,6 +92,7 @@ defmodule Color.SRGB do
       {1.0, 1.0, 1.0}
 
   """
+  @spec from_xyz(Color.XYZ.t()) :: {:ok, t()}
   def from_xyz(%Color.XYZ{x: x, y: y, z: z, alpha: alpha}) do
     {lr, lg, lb} = Lindbloom.xyz_to_rgb({x, y, z}, @from_xyz_matrix)
 

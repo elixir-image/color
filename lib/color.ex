@@ -186,6 +186,80 @@ defmodule Color do
 
   """
 
+  @typedoc """
+  Any colour struct supported by the library. Used as the parameter
+  type of `convert/2,3,4`, `to_xyz/1`, `premultiply/1`,
+  `unpremultiply/1`, `luminance/1`, and similar.
+  """
+  @type t ::
+          Color.SRGB.t()
+          | Color.AdobeRGB.t()
+          | Color.RGB.t()
+          | Color.Lab.t()
+          | Color.LCHab.t()
+          | Color.Luv.t()
+          | Color.LCHuv.t()
+          | Color.Oklab.t()
+          | Color.Oklch.t()
+          | Color.Hsl.t()
+          | Color.Hsv.t()
+          | Color.HSLuv.t()
+          | Color.HPLuv.t()
+          | Color.CMYK.t()
+          | Color.YCbCr.t()
+          | Color.JzAzBz.t()
+          | Color.ICtCp.t()
+          | Color.IPT.t()
+          | Color.CAM16UCS.t()
+          | Color.XYZ.t()
+          | Color.XYY.t()
+
+  @typedoc """
+  Anything `Color.new/1,2` accepts: a colour struct, a list of 3, 4
+  or 5 numbers, a hex string, a CSS named-colour string, or an
+  atom naming a CSS colour. See `Color.new/2` for the full set of
+  rules.
+  """
+  @type input ::
+          t()
+          | [number()]
+          | String.t()
+          | atom()
+
+  @typedoc """
+  A target colour space module — anything that can appear as the
+  second argument to `convert/2,3,4`.
+  """
+  @type target ::
+          Color.SRGB
+          | Color.AdobeRGB
+          | Color.RGB
+          | Color.Lab
+          | Color.LCHab
+          | Color.Luv
+          | Color.LCHuv
+          | Color.Oklab
+          | Color.Oklch
+          | Color.Hsl
+          | Color.Hsv
+          | Color.HSLuv
+          | Color.HPLuv
+          | Color.CMYK
+          | Color.YCbCr
+          | Color.JzAzBz
+          | Color.ICtCp
+          | Color.IPT
+          | Color.CAM16UCS
+          | Color.XYZ
+          | Color.XYY
+
+  @typedoc """
+  A `{:ok, color}` or `{:error, exception_struct}` result. The error
+  side is always one of the structured `Color.*Error` exceptions in
+  `lib/color/exceptions/`.
+  """
+  @type result :: {:ok, t()} | {:error, Exception.t()}
+
   @xyz_hub [
     Color.XYZ,
     Color.XYY,
@@ -386,6 +460,8 @@ defmodule Color do
     Color.CAM16UCS => :cam16_ucs
   }
 
+  @spec new(input(), Color.Types.space() | target()) :: result()
+  @spec new(input(), atom() | module()) :: result()
   def new(input, space \\ :srgb)
 
   def new([_, _, _] = list, space), do: list_to_color(list, space)
@@ -427,8 +503,7 @@ defmodule Color do
     if struct in @xyz_hub or struct == Color.RGB do
       {:ok, color}
     else
-      {:error,
-       %Color.UnsupportedTargetError{target: struct}}
+      {:error, %Color.UnsupportedTargetError{target: struct}}
     end
   end
 
@@ -450,6 +525,7 @@ defmodule Color do
 
   # Strict CMYK — 4 or 5 channels
   defp build(:cmyk, list) when length(list) in [4, 5], do: strict_cmyk(list)
+
   defp build(:cmyk, list),
     do: {:error, %Color.InvalidComponentError{space: "CMYK", value: list, reason: :wrong_count}}
 
@@ -491,10 +567,18 @@ defmodule Color do
 
   # Permissive cylindrical (hue wraps to [0, 360))
   defp build(:lch, list),
-    do: permissive_hue(list, Color.LCHab, "LCHab", [:l, :c, :h], illuminant: :D65, observer_angle: 2)
+    do:
+      permissive_hue(list, Color.LCHab, "LCHab", [:l, :c, :h],
+        illuminant: :D65,
+        observer_angle: 2
+      )
 
   defp build(:lchuv, list),
-    do: permissive_hue(list, Color.LCHuv, "LCHuv", [:l, :c, :h], illuminant: :D65, observer_angle: 2)
+    do:
+      permissive_hue(list, Color.LCHuv, "LCHuv", [:l, :c, :h],
+        illuminant: :D65,
+        observer_angle: 2
+      )
 
   defp build(:oklch, list),
     do: permissive_hue(list, Color.Oklch, "Oklch", [:l, :c, :h], [])
@@ -666,6 +750,7 @@ defmodule Color do
   defp cmyk_fields([c, m, y, k, a]), do: [c: c, m: m, y: y, k: k, alpha: a]
 
   defp fields([k1, k2, k3], [v1, v2, v3]), do: [{k1, v1}, {k2, v2}, {k3, v3}]
+
   defp fields([k1, k2, k3], [v1, v2, v3, a]),
     do: [{k1, v1}, {k2, v2}, {k3, v3}, {:alpha, a}]
 
@@ -807,13 +892,22 @@ defmodule Color do
       true
 
   """
+  @spec convert(input(), target()) :: result()
   def convert(color, target), do: do_convert(color, target, nil, [])
 
+  @spec convert(input(), target(), Color.Types.working_space() | keyword()) :: result()
   def convert(color, Color.RGB, working_space) when is_atom(working_space),
     do: do_convert(color, Color.RGB, working_space, [])
 
-  def convert(color, target, options) when is_list(options),
-    do: do_convert(color, target, nil, options)
+  def convert(color, target, options) when is_list(options) do
+    # `:working_space` is the canonical option-list form for picking
+    # the destination linear-RGB working space. The positional form
+    # `convert/4` is kept as sugar.
+    case Keyword.pop(options, :working_space) do
+      {nil, _opts} -> do_convert(color, target, nil, options)
+      {ws, opts} -> do_convert(color, target, ws, opts)
+    end
+  end
 
   @doc """
   Converts a color to `Color.RGB` (linear) in the given working space
@@ -841,7 +935,16 @@ defmodule Color do
       iex> {Float.round(rgb.r, 3), Float.round(rgb.g, 3), Float.round(rgb.b, 3)}
       {1.0, 1.0, 1.0}
 
+  Equivalent option-list form, which composes more cleanly with the
+  rendering-intent options:
+
+      iex> {:ok, rgb} = Color.convert(%Color.SRGB{r: 1.0, g: 1.0, b: 1.0},
+      ...>                            Color.RGB, working_space: :SRGB)
+      iex> {Float.round(rgb.r, 3), Float.round(rgb.g, 3), Float.round(rgb.b, 3)}
+      {1.0, 1.0, 1.0}
+
   """
+  @spec convert(input(), Color.RGB, Color.Types.working_space(), keyword()) :: result()
   def convert(color, Color.RGB, working_space, options)
       when is_atom(working_space) and is_list(options) do
     do_convert(color, Color.RGB, working_space, options)
@@ -962,6 +1065,7 @@ defmodule Color do
   * `{:ok, %Color.XYZ{}}`.
 
   """
+  @spec to_xyz(t()) :: {:ok, Color.XYZ.t()} | {:error, Exception.t()}
   def to_xyz(%Color.XYZ{} = xyz), do: {:ok, xyz}
   def to_xyz(%Color.XYY{} = c), do: Color.XYY.to_xyz(c)
   def to_xyz(%Color.Lab{} = c), do: Color.Lab.to_xyz(c)
@@ -983,6 +1087,152 @@ defmodule Color do
   def to_xyz(%Color.RGB{} = c), do: Color.RGB.to_xyz(c)
   def to_xyz(%Color.Hsl{} = c), do: Color.Hsl.to_xyz(c)
   def to_xyz(%Color.Hsv{} = c), do: Color.Hsv.to_xyz(c)
+
+  @doc """
+  Converts a list (or stream) of colors to the same target space.
+
+  This is the batch equivalent of `convert/2,3,4`. It is useful when
+  you have many colors heading to the same destination — for example
+  every pixel in a row, or every entry in a palette — and you want to
+  amortise the per-call setup over the whole list.
+
+  The implementation:
+
+  * Looks up the target's working-space matrix and chromatic
+    adaptation matrix once.
+
+  * Iterates the input list with a single fold, calling the
+    underlying space's `from_xyz/1` for each element.
+
+  * Halts at the first `{:error, _}` and returns it.
+
+  ### Arguments
+
+  * `colors` is a list, stream, or any other enumerable of inputs
+    accepted by `new/1`.
+
+  * `target` is the target color space module (or `Color.RGB`).
+
+  * `options` is the same keyword list as `convert/3`. For
+    `Color.RGB` targets pass `working_space:` (or use the
+    `convert_many/4` form).
+
+  ### Returns
+
+  * `{:ok, [color, ...]}` with one entry per input.
+
+  * `{:error, exception}` on the first failure.
+
+  ### Examples
+
+      iex> {:ok, [a, b, c]} = Color.convert_many(["red", "green", "blue"], Color.Lab)
+      iex> {Float.round(a.l, 1), Float.round(b.l, 1), Float.round(c.l, 1)}
+      {53.2, 46.2, 32.3}
+
+      iex> {:ok, list} = Color.convert_many([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+      ...>                                  Color.Oklab)
+      iex> length(list)
+      3
+
+      iex> {:ok, []} = Color.convert_many([], Color.Lab)
+
+  """
+  @spec convert_many(Enumerable.t(), target(), keyword()) ::
+          {:ok, [t()]} | {:error, Exception.t()}
+  def convert_many(colors, target, options \\ [])
+
+  def convert_many(colors, Color.RGB, options) when is_list(options) do
+    case Keyword.pop(options, :working_space) do
+      {nil, _} ->
+        {:error, %Color.MissingWorkingSpaceError{}}
+
+      {ws, opts} ->
+        convert_many(colors, Color.RGB, ws, opts)
+    end
+  end
+
+  def convert_many(colors, Color.RGB, working_space) when is_atom(working_space) do
+    convert_many(colors, Color.RGB, working_space, [])
+  end
+
+  def convert_many(colors, target, options) when target in @xyz_hub do
+    intent = Keyword.get(options, :intent, :relative_colorimetric)
+    bpc = Keyword.get(options, :bpc, false)
+    method = Keyword.get(options, :adaptation, :bradford)
+
+    Enum.reduce_while(colors, {:ok, []}, fn input, {:ok, acc} ->
+      with {:ok, color} <- new(input),
+           {:ok, xyz} <- to_xyz(color),
+           {:ok, xyz} <- adapt_for(xyz, target, intent, method, bpc),
+           {:ok, converted} <- target.from_xyz(xyz),
+           {:ok, final} <- apply_intent_gamut(converted, intent, target) do
+        {:cont, {:ok, [final | acc]}}
+      else
+        {:error, _} = err -> {:halt, err}
+      end
+    end)
+    |> case do
+      {:ok, list} -> {:ok, Enum.reverse(list)}
+      err -> err
+    end
+  end
+
+  def convert_many(_colors, target, _options) do
+    {:error, %Color.UnsupportedTargetError{target: target}}
+  end
+
+  @doc """
+  Converts a list of colors to a `Color.RGB` target in the named
+  working space, with rendering-intent options.
+
+  ### Arguments
+
+  * `colors` is an enumerable of inputs accepted by `new/1`.
+
+  * `target` must be `Color.RGB`.
+
+  * `working_space` is the working-space atom.
+
+  * `options` is the same keyword list as `convert/4`.
+
+  ### Returns
+
+  * `{:ok, [%Color.RGB{}, ...]}` on success.
+
+  ### Examples
+
+      iex> {:ok, list} = Color.convert_many(["red", "green", "blue"], Color.RGB, :SRGB)
+      iex> Enum.all?(list, &match?(%Color.RGB{working_space: :SRGB}, &1))
+      true
+
+  """
+  @spec convert_many(Enumerable.t(), Color.RGB, Color.Types.working_space(), keyword()) ::
+          {:ok, [Color.RGB.t()]} | {:error, Exception.t()}
+  def convert_many(colors, Color.RGB, working_space, options)
+      when is_atom(working_space) and is_list(options) do
+    intent = Keyword.get(options, :intent, :relative_colorimetric)
+    bpc = Keyword.get(options, :bpc, false)
+    method = Keyword.get(options, :adaptation, :bradford)
+
+    with {:ok, info} <- Color.RGB.WorkingSpace.rgb_conversion_matrix(working_space) do
+      Enum.reduce_while(colors, {:ok, []}, fn input, {:ok, acc} ->
+        with {:ok, color} <- new(input),
+             {:ok, xyz} <- to_xyz(color),
+             {:ok, xyz} <-
+               adapt_xyz(xyz, info.illuminant, info.observer_angle, intent, method, bpc),
+             {:ok, converted} <- Color.RGB.from_xyz(xyz, working_space),
+             {:ok, final} <- apply_intent_gamut_rgb(converted, intent, working_space) do
+          {:cont, {:ok, [final | acc]}}
+        else
+          {:error, _} = err -> {:halt, err}
+        end
+      end)
+      |> case do
+        {:ok, list} -> {:ok, Enum.reverse(list)}
+        err -> err
+      end
+    end
+  end
 
   @doc """
   Pre-multiplies a color's channels by its alpha.
@@ -1010,6 +1260,8 @@ defmodule Color do
       %Color.SRGB{r: 1.0, g: 0.5, b: 0.25, alpha: nil}
 
   """
+  @spec premultiply(Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()) ::
+          Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()
   def premultiply(%Color.SRGB{alpha: nil} = c), do: c
   def premultiply(%Color.SRGB{alpha: a} = c), do: %{c | r: c.r * a, g: c.g * a, b: c.b * a}
 
@@ -1047,12 +1299,15 @@ defmodule Color do
       %Color.SRGB{r: 0.0, g: 0.0, b: 0.0, alpha: 0.0}
 
   """
+  @spec unpremultiply(Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()) ::
+          Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()
   def unpremultiply(%Color.SRGB{alpha: nil} = c), do: c
   def unpremultiply(%Color.SRGB{alpha: a} = c) when a == 0, do: c
   def unpremultiply(%Color.SRGB{alpha: a} = c), do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
 
   def unpremultiply(%Color.AdobeRGB{alpha: nil} = c), do: c
   def unpremultiply(%Color.AdobeRGB{alpha: a} = c) when a == 0, do: c
+
   def unpremultiply(%Color.AdobeRGB{alpha: a} = c),
     do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
 
@@ -1064,6 +1319,219 @@ defmodule Color do
     raise ArgumentError,
           "unpremultiply/1 is only supported for Color.SRGB, Color.AdobeRGB and " <>
             "Color.RGB (linear). Got #{inspect(struct)}."
+  end
+
+  # ---- migration helpers for Image.Color swap ------------------------------
+
+  @doc """
+  Compile-time guard that returns `true` when `value` has a shape
+  that might be a color. The guard does a cheap structural check:
+
+  * any struct (tight coupling to the `@color_structs` list is not
+    possible in a `defguard` because `is_struct/2` only accepts a
+    literal module).
+
+  * a list of 3, 4 or 5 numbers — matches bare sRGB / CMYK lists.
+
+  * a binary (hex or CSS name).
+
+  * a non-boolean atom (CSS name).
+
+  For a strict check that the value is actually recognised, call
+  `Color.color?/1`.
+
+  ### Arguments
+
+  * `value` is anything.
+
+  ### Examples
+
+      iex> Color.is_color([1.0, 0.5, 0.0])
+      true
+
+      iex> Color.is_color("#ff0000")
+      true
+
+      iex> Color.is_color(:red)
+      true
+
+      iex> Color.is_color(42)
+      false
+
+  """
+  defguard is_color(value)
+           when is_struct(value) or
+                  (is_list(value) and
+                     (length(value) == 3 or length(value) == 4 or length(value) == 5)) or
+                  is_binary(value) or
+                  (is_atom(value) and value != nil and value != true and value != false)
+
+  @doc """
+  Returns `true` when `value` can be built into a color by
+  `Color.new/1`, and `false` otherwise.
+
+  This is a stricter, runtime version of `is_color/1`. It fully
+  parses hex strings and looks up CSS names, so an unknown name
+  returns `false`.
+
+  ### Arguments
+
+  * `value` is anything accepted by `new/1`.
+
+  ### Examples
+
+      iex> Color.color?("red")
+      true
+
+      iex> Color.color?("#ff0000")
+      true
+
+      iex> Color.color?([255, 128, 0])
+      true
+
+      iex> Color.color?([1.0, 0, 0])   # mixed integers and floats
+      false
+
+      iex> Color.color?("notacolor")
+      false
+
+      iex> Color.color?(42)
+      false
+
+  """
+  @spec color?(any()) :: boolean()
+  def color?(value) do
+    case new(value) do
+      {:ok, _} -> true
+      {:error, _} -> false
+    end
+  end
+
+  @doc """
+  Compile-time guard that returns `true` when `value` looks like it
+  could be a CSS named color — that is, an atom or a binary. The
+  guard does not check that the name is actually in the lookup table;
+  for that use `Color.css_name?/1`.
+
+  ### Arguments
+
+  * `value` is anything.
+
+  ### Examples
+
+      iex> Color.is_css_name("red")
+      true
+
+      iex> Color.is_css_name(:misty_rose)
+      true
+
+      iex> Color.is_css_name(123)
+      false
+
+  """
+  defguard is_css_name(value)
+           when is_binary(value) or
+                  (is_atom(value) and value != nil and value != true and value != false)
+
+  @doc """
+  Returns `true` when `value` is actually a known CSS named color.
+  Accepts atoms or strings; ignores underscores, hyphens, whitespace
+  and case, so `:misty_rose`, `"Misty Rose"` and `"MistyRose"` all
+  resolve to the same entry.
+
+  ### Arguments
+
+  * `value` is an atom or string.
+
+  ### Examples
+
+      iex> Color.css_name?("rebeccapurple")
+      true
+
+      iex> Color.css_name?(:misty_rose)
+      true
+
+      iex> Color.css_name?("notacolor")
+      false
+
+      iex> Color.css_name?(nil)
+      false
+
+  """
+  @spec css_name?(any()) :: boolean()
+  def css_name?(value) when is_atom(value) and value not in [nil, true, false] do
+    Color.CSSNames.known?(value)
+  end
+
+  def css_name?(value) when is_binary(value) do
+    Color.CSSNames.known?(value)
+  end
+
+  def css_name?(_other), do: false
+
+  @doc """
+  Validates a transparency value from the union of forms used by
+  `Image.Color` and its callers, returning an alpha as a float in
+  `[0.0, 1.0]`.
+
+  Accepts:
+
+  * `:transparent` / `:none` → `0.0` (fully transparent).
+
+  * `:opaque` → `1.0` (fully opaque).
+
+  * an integer in `0..255` — scaled by `1/255`.
+
+  * a float in `[0.0, 1.0]` — returned unchanged.
+
+  ### Arguments
+
+  * `value` is any of the above.
+
+  ### Returns
+
+  * `{:ok, float}` in `[0.0, 1.0]`.
+
+  * `{:error, %Color.InvalidComponentError{}}` otherwise.
+
+  ### Examples
+
+      iex> Color.validate_transparency(:transparent)
+      {:ok, 0.0}
+
+      iex> Color.validate_transparency(:opaque)
+      {:ok, 1.0}
+
+      iex> Color.validate_transparency(128)
+      {:ok, 0.5019607843137255}
+
+      iex> Color.validate_transparency(0.75)
+      {:ok, 0.75}
+
+      iex> {:error, %Color.InvalidComponentError{}} = Color.validate_transparency(:maybe)
+
+      iex> {:error, %Color.InvalidComponentError{}} = Color.validate_transparency(300)
+
+  """
+  @spec validate_transparency(any()) :: {:ok, float()} | {:error, Exception.t()}
+  def validate_transparency(:transparent), do: {:ok, 0.0}
+  def validate_transparency(:none), do: {:ok, 0.0}
+  def validate_transparency(:opaque), do: {:ok, 1.0}
+
+  def validate_transparency(int) when is_integer(int) and int in 0..255,
+    do: {:ok, int / 255}
+
+  def validate_transparency(float) when is_float(float) and float >= 0.0 and float <= 1.0,
+    do: {:ok, float}
+
+  def validate_transparency(other) do
+    {:error,
+     %Color.InvalidComponentError{
+       space: "alpha",
+       value: other,
+       range: {0.0, 1.0},
+       reason: :out_of_range
+     }}
   end
 
   @doc """
@@ -1096,7 +1564,27 @@ defmodule Color do
       0.2126
 
   """
+  @spec luminance(input()) :: float()
   defdelegate luminance(color), to: Color.Contrast, as: :relative_luminance
+
+  @doc """
+  Alias for `luminance/1`. Returns the WCAG 2.x relative luminance of
+  a color, the same value `Color.Contrast.relative_luminance/1`
+  computes. The longer name is the canonical one because the bare
+  `luminance` is ambiguous between absolute photometric luminance,
+  perceived lightness, and the WCAG definition.
+
+  ### Examples
+
+      iex> Color.relative_luminance("white")
+      1.0
+
+      iex> Color.relative_luminance("black")
+      0.0
+
+  """
+  @spec relative_luminance(input()) :: float()
+  defdelegate relative_luminance(color), to: Color.Contrast
 
   @doc """
   Sorts a list of colors by a perceptual criterion.
@@ -1151,6 +1639,7 @@ defmodule Color do
       3
 
   """
+  @spec sort([input()], keyword()) :: {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def sort(colors, options \\ []) when is_list(colors) do
     by = Keyword.get(options, :by, :luminance)
     order = Keyword.get(options, :order, :asc)
@@ -1242,9 +1731,18 @@ defmodule Color do
   end
 
   defp sort_key(other) do
-    raise ArgumentError,
-          "Unknown sort key #{inspect(other)}. Valid keys: :luminance, " <>
-            ":lightness, :oklab_l, :chroma, :oklch_c, :hue, :oklch_h, :hlv, " <>
-            "or a 1-arity function."
+    raise %Color.UnknownSortKeyError{
+      key: other,
+      valid: [
+        :luminance,
+        :lightness,
+        :oklab_l,
+        :chroma,
+        :oklch_c,
+        :hue,
+        :oklch_h,
+        :hlv
+      ]
+    }
   end
 end

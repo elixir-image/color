@@ -7,6 +7,8 @@ defmodule Color.XYY do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
   alias Color.Tristimulus
 
@@ -16,6 +18,19 @@ defmodule Color.XYY do
             alpha: nil,
             illuminant: :D65,
             observer_angle: 2
+
+  @typedoc """
+  CIE xyY chromaticity (`x`, `y`) plus luminance (`yY`). Useful for
+  reasoning about gamut on a chromaticity diagram.
+  """
+  @type t :: %__MODULE__{
+          x: float() | nil,
+          y: float() | nil,
+          yY: float() | nil,
+          alpha: Color.Types.alpha(),
+          illuminant: Color.Types.illuminant(),
+          observer_angle: Color.Types.observer()
+        }
 
   @doc """
   Converts an `xyY` color to CIE `XYZ`.
@@ -50,25 +65,19 @@ defmodule Color.XYY do
   end
 
   # Legacy list-based helpers used at compile time by Color.Tristimulus.
-  @doc false
-  def to_xyz(["_", "_"]), do: nil
+  # These do NOT participate in the to_xyz/1 callback shape — the
+  # struct clause above is the one and only canonical implementation.
 
   @doc false
-  def to_xyz([x, y]), do: to_xyz([x, y, 1.0])
+  def to_xyz_list(["_", "_"]), do: nil
+  def to_xyz_list([x, y]), do: to_xyz_list([x, y, 1.0])
 
-  @doc false
-  def to_xyz([x, y, yY]) do
+  def to_xyz_list([x, y, yY]) do
     xi = x * yY / y
     yi = yY
     zi = (1.0 - x - y) * yY / y
     [xi, yi, zi]
   end
-
-  @doc false
-  def to_xyz_list(["_", "_"]), do: nil
-
-  @doc false
-  def to_xyz_list(list), do: to_xyz(list)
 
   @doc """
   Converts a CIE `XYZ` color to `xyY`.

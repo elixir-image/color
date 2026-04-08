@@ -1,12 +1,49 @@
 defmodule Color.Tristimulus do
   @moduledoc """
-  Illuminant reference white data. All values are stored as plain lists
-  of floats — the library does not require `Nx`.
+  Authoritative source of illuminant reference white data.
+
+  This module is the single source of truth for every CIE illuminant
+  the library supports — `:A`, `:B`, `:C`, `:D50`, `:D55`, `:D65`,
+  `:D75`, `:E`, `:F2`, `:F7`, `:F11`, plus the LED, ID and DCI series
+  — and for the two CIE standard observer angles (`2` and `10`). It
+  is consulted by:
+
+  * `Color.XYZ.adapt/3` — chromatic adaptation between illuminants.
+
+  * `Color.RGB.WorkingSpace` — when computing the RGB→XYZ matrix for
+    a working space, the illuminant's reference white feeds the
+    Lindbloom primary-scaling step.
+
+  * `Color.Lab`, `Color.Luv`, `Color.LCHab`, `Color.LCHuv`,
+    `Color.XYY` — every CIE-tagged colour space converts to XYZ
+    relative to its illuminant's reference white.
+
+  * `Color.Spectral` — the integration normaliser uses the
+    illuminant SPDs from `Color.Spectral.Tables`, which are paired
+    with the chromaticities defined here.
+
+  Reference whites for the 11 most common illuminants at the 2°
+  observer come directly from Bruce Lindbloom's tables and are
+  reproduced exactly. The remaining illuminants are computed from
+  CIE 1931 / CIE 1964 chromaticities.
+
+  All values are returned as plain lists or tuples of `float()`
+  — the module has no `Nx` dependency.
 
   """
 
   @observer_angles [2, 10]
 
+  @doc """
+  Returns the supported CIE standard observer angles.
+
+  ### Examples
+
+      iex> Color.Tristimulus.observer_angles()
+      [2, 10]
+
+  """
+  @spec observer_angles() :: [2 | 10]
   def observer_angles do
     @observer_angles
   end
@@ -36,7 +73,7 @@ defmodule Color.Tristimulus do
 
     case tristimulus(illuminant, observer_angle) do
       {:ok, data} -> data
-      {:error, reason} -> raise ArgumentError, message: reason
+      {:error, exception} -> raise exception
     end
   end
 
@@ -134,14 +171,14 @@ defmodule Color.Tristimulus do
   @illumimant_alias_names Map.keys(@illuminant_aliases)
 
   @illuminants @xyz_tristimulus_table
-    |> String.split("\n", trim: true)
-    |> Enum.reject(&String.starts_with?(&1, "#"))
-    |> Enum.map(fn line ->
-      line
-      |> String.split("\s", trim: true)
-      |> hd
-      |> String.to_atom()
-    end)
+               |> String.split("\n", trim: true)
+               |> Enum.reject(&String.starts_with?(&1, "#"))
+               |> Enum.map(fn line ->
+                 line
+                 |> String.split("\s", trim: true)
+                 |> hd
+                 |> String.to_atom()
+               end)
 
   def illuminants do
     @illuminants
@@ -167,44 +204,44 @@ defmodule Color.Tristimulus do
   }
 
   @xyz_tristimulus @xyz_tristimulus_table
-    |> String.split("\n", trim: true)
-    |> Enum.reject(&String.starts_with?(&1, "#"))
-    |> Enum.flat_map(fn line ->
-      [illuminant | data] =
-        line
-        |> String.split("#")
-        |> hd()
-        |> String.split("\s", trim: true)
-        |> Enum.map(fn elem ->
-          case Float.parse(elem) do
-            {float, ""} -> float
-            :error -> elem
-          end
-        end)
+                   |> String.split("\n", trim: true)
+                   |> Enum.reject(&String.starts_with?(&1, "#"))
+                   |> Enum.flat_map(fn line ->
+                     [illuminant | data] =
+                       line
+                       |> String.split("#")
+                       |> hd()
+                       |> String.split("\s", trim: true)
+                       |> Enum.map(fn elem ->
+                         case Float.parse(elem) do
+                           {float, ""} -> float
+                           :error -> elem
+                         end
+                       end)
 
-      [cie1931, cie1964, _cct] = Enum.chunk_every(data, 2)
-      atom = String.to_atom(illuminant)
+                     [cie1931, cie1964, _cct] = Enum.chunk_every(data, 2)
+                     atom = String.to_atom(illuminant)
 
-      cie1931 =
-        case Map.fetch(@lindbloom_overrides_2, atom) do
-          {:ok, xyz} -> xyz
-          :error -> Color.XYY.to_xyz_list(cie1931)
-        end
+                     cie1931 =
+                       case Map.fetch(@lindbloom_overrides_2, atom) do
+                         {:ok, xyz} -> xyz
+                         :error -> Color.XYY.to_xyz_list(cie1931)
+                       end
 
-      cie1964 = Color.XYY.to_xyz_list(cie1964)
+                     cie1964 = Color.XYY.to_xyz_list(cie1964)
 
-      case Enum.reject([cie1931, cie1964], &is_nil/1) do
-        [cie1931] ->
-          [{{atom, 2}, cie1931}]
+                     case Enum.reject([cie1931, cie1964], &is_nil/1) do
+                       [cie1931] ->
+                         [{{atom, 2}, cie1931}]
 
-        [cie1931, cie1964] ->
-          [
-            {{atom, 2}, cie1931},
-            {{atom, 10}, cie1964}
-          ]
-      end
-    end)
-    |> Map.new()
+                       [cie1931, cie1964] ->
+                         [
+                           {{atom, 2}, cie1931},
+                           {{atom, 10}, cie1964}
+                         ]
+                     end
+                   end)
+                   |> Map.new()
 
   def tristimulus do
     @xyz_tristimulus
@@ -219,8 +256,11 @@ defmodule Color.Tristimulus do
 
         _other ->
           {:error,
-           "Illuminant #{inspect(illuminant)} has no tristimulus " <>
-             "for #{inspect(observer_angle)}° observer angle."}
+           %Color.UnknownIlluminantError{
+             illuminant: illuminant,
+             observer_angle: observer_angle,
+             valid: @illuminants
+           }}
       end
     end
   end
@@ -239,12 +279,13 @@ defmodule Color.Tristimulus do
     |> String.replace(["-", " "], "_")
     |> String.to_existing_atom()
     |> validate_illuminant
-  rescue ArgumentError ->
-    {:error, invalid_illuminant_error(illuminant)}
+  rescue
+    ArgumentError ->
+      {:error, %Color.UnknownIlluminantError{illuminant: illuminant, valid: @illuminants}}
   end
 
   def validate_illuminant(illuminant) do
-    {:error, invalid_illuminant_error(illuminant)}
+    {:error, %Color.UnknownIlluminantError{illuminant: illuminant, valid: @illuminants}}
   end
 
   def validate_observer_angle(observer_angle) when observer_angle in @observer_angles do
@@ -253,12 +294,10 @@ defmodule Color.Tristimulus do
 
   def validate_observer_angle(observer_angle) do
     {:error,
-     "Unknown observer angle #{inspect(observer_angle)}°. " <>
-       "Valid observer angles are #{inspect(@observer_angles)}"}
-  end
-
-  def invalid_illuminant_error(illuminant) do
-    "Invalid illuminant #{inspect(illuminant)}.  " <>
-      "Valid illuminants are #{inspect(@illuminants)}"
+     %Color.InvalidComponentError{
+       space: "Tristimulus",
+       value: observer_angle,
+       reason: :out_of_range
+     }}
   end
 end

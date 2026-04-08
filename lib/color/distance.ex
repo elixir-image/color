@@ -51,6 +51,7 @@ defmodule Color.Distance do
       4.0011
 
   """
+  @spec delta_e_76(Color.input(), Color.input()) :: float()
   def delta_e_76(a, b) do
     {l1, a1, b1} = lab_triple(a)
     {l2, a2, b2} = lab_triple(b)
@@ -91,6 +92,7 @@ defmodule Color.Distance do
       1.3950
 
   """
+  @spec delta_e_94(Color.input(), Color.input(), keyword()) :: float()
   def delta_e_94(a, b, options \\ []) do
     {k_l, k1, k2} =
       case Keyword.get(options, :application, :graphic_arts) do
@@ -159,6 +161,7 @@ defmodule Color.Distance do
       27.1492
 
   """
+  @spec delta_e_2000(Color.input(), Color.input(), keyword()) :: float()
   def delta_e_2000(a, b, options \\ []) do
     k_l = Keyword.get(options, :kL, 1.0)
     k_c = Keyword.get(options, :kC, 1.0)
@@ -256,6 +259,7 @@ defmodule Color.Distance do
       1.7387
 
   """
+  @spec delta_e_cmc(Color.input(), Color.input(), keyword()) :: float()
   def delta_e_cmc(a, b, options \\ []) do
     l_w = Keyword.get(options, :l, 2.0)
     c_w = Keyword.get(options, :c, 1.0)

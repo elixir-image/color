@@ -116,7 +116,10 @@ defmodule Color.ChromaticAdaptation do
   """
   def ργβ(illuminant, observer_angle, adaptation_method \\ :bradford) do
     adaptation = Map.fetch!(@chromatic_adaptations, adaptation_method)
-    [xr, yr, zr] = Tristimulus.reference_white(illuminant: illuminant, observer_angle: observer_angle)
+
+    [xr, yr, zr] =
+      Tristimulus.reference_white(illuminant: illuminant, observer_angle: observer_angle)
+
     Lindbloom.rgb_to_xyz({xr, yr, zr}, adaptation.matrix)
   end
 

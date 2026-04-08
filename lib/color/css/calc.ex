@@ -162,6 +162,7 @@ defmodule Color.CSS.Calc do
   end
 
   defp parse_primary([]), do: {:error, calc_error("unexpected end of expression")}
+
   defp parse_primary([token | _]),
     do: {:error, calc_error("unexpected token #{inspect(token)}")}
 
@@ -169,6 +170,7 @@ defmodule Color.CSS.Calc do
 
   defp eval({:num, n}, _bindings), do: {:ok, n * 1.0}
   defp eval({:percent, p}, _bindings), do: {:ok, p * 1.0}
+
   defp eval({:neg, expr}, bindings) do
     case eval(expr, bindings) do
       {:ok, v} -> {:ok, -v}
@@ -195,7 +197,6 @@ defmodule Color.CSS.Calc do
   defp apply_op(:+, l, r), do: {:ok, l + r}
   defp apply_op(:-, l, r), do: {:ok, l - r}
   defp apply_op(:*, l, r), do: {:ok, l * r}
-  defp apply_op(:/, _l, 0), do: {:error, calc_error("division by zero")}
   defp apply_op(:/, _l, +0.0), do: {:error, calc_error("division by zero")}
   defp apply_op(:/, _l, -0.0), do: {:error, calc_error("division by zero")}
   defp apply_op(:/, l, r), do: {:ok, l / r}

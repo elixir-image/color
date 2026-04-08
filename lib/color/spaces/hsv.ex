@@ -8,7 +8,21 @@ defmodule Color.Hsv do
 
   """
 
+  @behaviour Color.Behaviour
+
   defstruct [:h, :s, :v, :alpha]
+
+  @typedoc """
+  A non-linear HSV reparameterisation of sRGB. All three components
+  are unit floats in `[0.0, 1.0]`. Hue is one full turn over `[0,
+  1]`.
+  """
+  @type t :: %__MODULE__{
+          h: float() | nil,
+          s: float() | nil,
+          v: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   @doc """
   Converts an HSV color to sRGB.

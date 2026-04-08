@@ -43,6 +43,8 @@ defmodule Color.Harmony do
       true
 
   """
+  @spec rotate_hue(Color.input(), number(), keyword()) ::
+          {:ok, Color.SRGB.t()} | {:error, Exception.t()}
   def rotate_hue(color, degrees, options \\ []) do
     space = Keyword.get(options, :in, Color.Oklch)
 
@@ -66,6 +68,8 @@ defmodule Color.Harmony do
   * `{:ok, [%Color.SRGB{}, %Color.SRGB{}]}`.
 
   """
+  @spec complementary(Color.input(), keyword()) ::
+          {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def complementary(color, options \\ []), do: harmonic_set(color, [0, 180], options)
 
   @doc """
@@ -84,6 +88,8 @@ defmodule Color.Harmony do
     `[anchor, anchor - spread, anchor + spread]`.
 
   """
+  @spec analogous(Color.input(), keyword()) ::
+          {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def analogous(color, options \\ []) do
     spread = Keyword.get(options, :spread, 30)
     harmonic_set(color, [0, -spread, spread], options)
@@ -103,6 +109,8 @@ defmodule Color.Harmony do
   * `{:ok, [%Color.SRGB{}, %Color.SRGB{}, %Color.SRGB{}]}`.
 
   """
+  @spec triadic(Color.input(), keyword()) ::
+          {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def triadic(color, options \\ []), do: harmonic_set(color, [0, 120, 240], options)
 
   @doc """
@@ -119,6 +127,8 @@ defmodule Color.Harmony do
   * `{:ok, [%Color.SRGB{}, %Color.SRGB{}, %Color.SRGB{}, %Color.SRGB{}]}`.
 
   """
+  @spec tetradic(Color.input(), keyword()) ::
+          {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def tetradic(color, options \\ []), do: harmonic_set(color, [0, 90, 180, 270], options)
 
   @doc """
@@ -137,6 +147,8 @@ defmodule Color.Harmony do
   * `{:ok, [%Color.SRGB{}, %Color.SRGB{}, %Color.SRGB{}]}`.
 
   """
+  @spec split_complementary(Color.input(), keyword()) ::
+          {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def split_complementary(color, options \\ []) do
     spread = Keyword.get(options, :spread, 30)
     harmonic_set(color, [0, 180 - spread, 180 + spread], options)
@@ -166,8 +178,7 @@ defmodule Color.Harmony do
   defp do_rotate(Color.Hsv, c, deg), do: %{c | h: wrap(c.h * 360 + deg) / 360}
 
   defp do_rotate(other, _, _) do
-    raise ArgumentError,
-          "Color.Harmony needs a cylindrical space; got #{inspect(other)}"
+    raise %Color.UnknownColorSpaceError{space: other}
   end
 
   defp wrap(h) do

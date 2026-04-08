@@ -17,9 +17,22 @@ defmodule Color.JzAzBz do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:jz, :az, :bz, :alpha]
+
+  @typedoc """
+  A JzAzBz colour (Safdar et al. 2017), an HDR/wide-gamut perceptual
+  space. `jz` is lightness, `az` and `bz` are chromatic axes.
+  """
+  @type t :: %__MODULE__{
+          jz: float() | nil,
+          az: float() | nil,
+          bz: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   # Safdar et al. 2017 constants
   @b 1.15

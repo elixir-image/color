@@ -10,10 +10,21 @@ defmodule Color.Lab do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
   alias Color.Tristimulus
 
   defstruct [:l, :a, :b, :alpha, illuminant: :D65, observer_angle: 2]
+
+  @type t :: %__MODULE__{
+          l: number() | nil,
+          a: number() | nil,
+          b: number() | nil,
+          alpha: number() | nil,
+          illuminant: atom(),
+          observer_angle: 2 | 10
+        }
 
   @doc """
   Converts an `L*a*b*` color to a CIE `XYZ` color.

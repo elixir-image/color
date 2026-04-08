@@ -50,6 +50,7 @@ defmodule Color.Contrast do
       0.2126
 
   """
+  @spec relative_luminance(Color.input()) :: float()
   def relative_luminance(color) do
     {:ok, srgb} = Color.convert(color, Color.SRGB)
 
@@ -83,6 +84,7 @@ defmodule Color.Contrast do
       4.48
 
   """
+  @spec wcag_ratio(Color.input(), Color.input()) :: float()
   def wcag_ratio(a, b) do
     la = relative_luminance(a)
     lb = relative_luminance(b)
@@ -119,6 +121,8 @@ defmodule Color.Contrast do
       :aa_large
 
   """
+  @spec wcag_level(Color.input(), Color.input()) ::
+          :aaa | :aaa_large | :aa_large | :fail
   def wcag_level(a, b) do
     ratio = wcag_ratio(a, b)
 
@@ -173,6 +177,7 @@ defmodule Color.Contrast do
       -107.9
 
   """
+  @spec apca(Color.input(), Color.input()) :: float()
   def apca(text, background) do
     yt = apca_y(text)
     yb = apca_y(background)
@@ -236,6 +241,8 @@ defmodule Color.Contrast do
       "#00008b"
 
   """
+  @spec pick_contrasting(Color.input(), [Color.input()]) ::
+          {:ok, Color.SRGB.t()} | {:error, Exception.t()}
   def pick_contrasting(background, candidates \\ ["white", "black"]) do
     with {:ok, bg} <- Color.convert(background, Color.SRGB) do
       {chosen, _ratio} =

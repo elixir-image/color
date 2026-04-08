@@ -6,9 +6,22 @@ defmodule Color.Oklch do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Oklab, as: Math
 
   defstruct [:l, :c, :h, :alpha]
+
+  @typedoc """
+  Cylindrical Oklab. `l` is lightness in `[0.0, 1.0]`, `c` is chroma
+  `≥ 0`, and `h` is hue in degrees `[0.0, 360.0)`. Defined against D65.
+  """
+  @type t :: %__MODULE__{
+          l: float() | nil,
+          c: float() | nil,
+          h: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   @doc """
   Converts an Oklch color to Oklab.

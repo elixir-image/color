@@ -28,9 +28,25 @@ defmodule Color.YCbCr do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:y, :cb, :cr, :alpha, variant: :bt709]
+
+  @typedoc """
+  Digital video YCbCr. `y` is luma; `cb` and `cr` are the
+  blue-difference and red-difference chroma channels. The `:variant`
+  field selects the matrix coefficients (`:bt601`, `:bt709`,
+  `:bt2020`).
+  """
+  @type t :: %__MODULE__{
+          y: float() | nil,
+          cb: float() | nil,
+          cr: float() | nil,
+          alpha: Color.Types.alpha(),
+          variant: :bt601 | :bt709 | :bt2020
+        }
 
   # Luma coefficients (Kr, Kg, Kb) for each variant.
   @coefficients %{

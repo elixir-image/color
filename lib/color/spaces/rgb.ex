@@ -18,6 +18,19 @@ defmodule Color.RGB do
 
   defstruct [:r, :g, :b, :alpha, :working_space]
 
+  @typedoc """
+  Linear RGB in any named working space. The `working_space` field
+  identifies which set of primaries and reference white to use; see
+  `Color.RGB.WorkingSpace.rgb_working_spaces/0` for the full list.
+  """
+  @type t :: %__MODULE__{
+          r: float() | nil,
+          g: float() | nil,
+          b: float() | nil,
+          alpha: Color.Types.alpha(),
+          working_space: Color.Types.working_space() | nil
+        }
+
   @doc """
   Converts a linear RGB color to CIE `XYZ`.
 

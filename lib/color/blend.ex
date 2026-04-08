@@ -67,6 +67,8 @@ defmodule Color.Blend do
   * `{:error, reason}` if the mode is unknown.
 
   """
+  @spec blend(Color.input(), Color.input(), atom()) ::
+          {:ok, Color.SRGB.t()} | {:error, Exception.t()}
   def blend(backdrop, source, mode) when mode in @separable do
     with {:ok, cb} <- Color.convert(backdrop, Color.SRGB),
          {:ok, cs} <- Color.convert(source, Color.SRGB) do

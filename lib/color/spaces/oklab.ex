@@ -9,9 +9,18 @@ defmodule Color.Oklab do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Oklab, as: Math
 
   defstruct [:l, :a, :b, :alpha]
+
+  @type t :: %__MODULE__{
+          l: number() | nil,
+          a: number() | nil,
+          b: number() | nil,
+          alpha: number() | nil
+        }
 
   @doc """
   Converts an Oklab color to a CIE `XYZ` color (D65/2°).

@@ -45,6 +45,7 @@ defmodule Color.Gamut do
   * A boolean.
 
   """
+  @spec in_gamut?(Color.input(), Color.Types.working_space()) :: boolean()
   def in_gamut?(color, working_space \\ :SRGB) do
     case Color.convert(color, Color.RGB, working_space) do
       {:ok, rgb} ->
@@ -86,6 +87,8 @@ defmodule Color.Gamut do
       true
 
   """
+  @spec to_gamut(Color.input(), Color.Types.working_space(), keyword()) ::
+          {:ok, struct()} | {:error, Exception.t()}
   def to_gamut(color, working_space \\ :SRGB, options \\ []) do
     method = Keyword.get(options, :method, :oklch)
 

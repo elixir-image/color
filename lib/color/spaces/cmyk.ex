@@ -9,7 +9,23 @@ defmodule Color.CMYK do
 
   """
 
+  @behaviour Color.Behaviour
+
   defstruct [:c, :m, :y, :k, :alpha]
+
+  @typedoc """
+  A simple subtractive CMYK colour. Each of `c`, `m`, `y`, `k` is a
+  unit float in `[0.0, 1.0]`. No ICC profile is implied — this is
+  device-independent CMYK suitable for `device-cmyk()` interchange,
+  not for press output.
+  """
+  @type t :: %__MODULE__{
+          c: float() | nil,
+          m: float() | nil,
+          y: float() | nil,
+          k: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   @doc """
   Converts a CMYK color to sRGB.

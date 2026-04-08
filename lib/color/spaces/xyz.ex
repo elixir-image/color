@@ -12,9 +12,20 @@ defmodule Color.XYZ do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.{ChromaticAdaptation, Conversion.Lindbloom}
 
   defstruct [:x, :y, :z, :alpha, :illuminant, :observer_angle]
+
+  @type t :: %__MODULE__{
+          x: number() | nil,
+          y: number() | nil,
+          z: number() | nil,
+          alpha: number() | nil,
+          illuminant: atom() | nil,
+          observer_angle: 2 | 10 | nil
+        }
 
   @doc """
   Identity conversion from `Color.XYZ` to `Color.XYZ`.
@@ -80,6 +91,7 @@ defmodule Color.XYZ do
       {0.95047, 1.0, 1.08883}
 
   """
+  @spec adapt(t(), atom(), keyword()) :: {:ok, t()}
   def adapt(%__MODULE__{} = xyz, dest_illuminant, options \\ []) do
     source_illuminant = xyz.illuminant || :D65
     source_observer_angle = xyz.observer_angle || 2
@@ -161,6 +173,7 @@ defmodule Color.XYZ do
       0.052632
 
   """
+  @spec apply_bpc(t(), number(), number()) :: t()
   def apply_bpc(%__MODULE__{} = xyz, source_bp, dest_bp)
       when is_number(source_bp) and is_number(dest_bp) do
     if source_bp == dest_bp do

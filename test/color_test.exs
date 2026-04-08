@@ -2,7 +2,11 @@ defmodule ColorTest do
   use ExUnit.Case
 
   doctest Color
+  doctest Color.Behaviour
+  doctest Color.ChromaticAdaptation
   doctest Color.Conversion.Lindbloom
+  doctest Color.HSLuv.Gamut
+  doctest Color.Spectral.Tables
   doctest Color.Tristimulus
   doctest Color.Lab
   doctest Color.LCHab
@@ -205,8 +209,7 @@ defmodule ColorTest do
     end
 
     test "new/1 rejects out-of-range integers" do
-      assert {:error,
-              %Color.InvalidComponentError{reason: :out_of_range, range: {0, 255}}} =
+      assert {:error, %Color.InvalidComponentError{reason: :out_of_range, range: {0, 255}}} =
                Color.new([300, 0, 0])
 
       assert {:error, %Color.InvalidComponentError{reason: :out_of_range}} =
@@ -217,8 +220,7 @@ defmodule ColorTest do
     end
 
     test "new/1 rejects out-of-range floats" do
-      assert {:error,
-              %Color.InvalidComponentError{reason: :out_of_range, range: {lo, hi}}} =
+      assert {:error, %Color.InvalidComponentError{reason: :out_of_range, range: {lo, hi}}} =
                Color.new([1.5, 0.0, 0.0])
 
       assert lo == +0.0
@@ -284,6 +286,82 @@ defmodule ColorTest do
       assert_in_delta rgb.r, 1.0, 1.0e-10
       assert_in_delta rgb.g, 1.0, 1.0e-10
       assert_in_delta rgb.b, 1.0, 1.0e-10
+    end
+
+    test "convert/3 accepts working_space: in options keyword (API symmetry)" do
+      {:ok, positional} = Color.convert([1.0, 0.5, 0.0], Color.RGB, :Rec2020)
+
+      {:ok, keyword} =
+        Color.convert([1.0, 0.5, 0.0], Color.RGB, working_space: :Rec2020)
+
+      assert_in_delta positional.r, keyword.r, 1.0e-10
+      assert_in_delta positional.g, keyword.g, 1.0e-10
+      assert_in_delta positional.b, keyword.b, 1.0e-10
+      assert positional.working_space == :Rec2020
+      assert keyword.working_space == :Rec2020
+    end
+
+    test "convert_many/2 produces same result as map(convert/2)" do
+      colors = ["red", "green", "blue", "white", "black", "#888"]
+
+      {:ok, batch} = Color.convert_many(colors, Color.Lab)
+
+      individually =
+        Enum.map(colors, fn c ->
+          {:ok, lab} = Color.convert(c, Color.Lab)
+          lab
+        end)
+
+      assert batch == individually
+    end
+
+    test "convert_many/3 with positional working_space" do
+      {:ok, list} = Color.convert_many([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], Color.RGB, :Rec2020)
+      assert length(list) == 2
+      assert Enum.all?(list, &match?(%Color.RGB{working_space: :Rec2020}, &1))
+    end
+
+    test "convert_many/3 with working_space: in options" do
+      {:ok, list} =
+        Color.convert_many([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], Color.RGB, working_space: :Rec2020)
+
+      assert length(list) == 2
+    end
+
+    test "convert_many/4 supports rendering intents" do
+      p3_red = %Color.RGB{r: 1.0, g: 0.0, b: 0.0, working_space: :P3_D65}
+
+      {:ok, [mapped]} =
+        Color.convert_many([p3_red], Color.RGB, :SRGB, intent: :perceptual)
+
+      assert mapped.r <= 1.0 + 1.0e-5
+    end
+
+    test "convert_many/2 halts on first error" do
+      assert {:error, %Color.UnknownColorNameError{}} =
+               Color.convert_many(["red", "notacolor", "blue"], Color.Lab)
+    end
+
+    test "convert_many/2 returns Color.MissingWorkingSpaceError for Color.RGB without working_space" do
+      assert {:error, %Color.MissingWorkingSpaceError{}} =
+               Color.convert_many(["red"], Color.RGB)
+    end
+
+    test "convert_many/2 accepts an empty list" do
+      assert {:ok, []} = Color.convert_many([], Color.Lab)
+    end
+
+    test "convert/3 keyword form composes with rendering intent" do
+      p3_red = %Color.RGB{r: 1.0, g: 0.0, b: 0.0, working_space: :P3_D65}
+
+      {:ok, mapped} =
+        Color.convert(p3_red, Color.RGB,
+          working_space: :SRGB,
+          intent: :perceptual
+        )
+
+      assert mapped.r <= 1.0 + 1.0e-5
+      assert mapped.r >= 0.0
     end
   end
 
@@ -497,6 +575,7 @@ defmodule ColorTest do
 
     test "premultiply/1 works on linear Color.RGB" do
       c = %Color.RGB{r: 1.0, g: 0.5, b: 0.25, alpha: 0.5, working_space: :SRGB}
+
       assert %Color.RGB{r: 0.5, g: 0.25, b: 0.125, alpha: 0.5, working_space: :SRGB} =
                Color.premultiply(c)
     end
@@ -718,6 +797,7 @@ defmodule ColorTest do
 
     test "Color.sort/2 by lightness uses Lab L*" do
       {:ok, sorted} = Color.sort(["red", "green", "blue"], by: :lightness)
+
       lightnesses =
         Enum.map(sorted, fn c ->
           {:ok, lab} = Color.convert(c, Color.Lab)
@@ -734,7 +814,7 @@ defmodule ColorTest do
     end
 
     test "Color.sort/2 errors on unknown :by preset" do
-      assert_raise ArgumentError, ~r/Unknown sort key/, fn ->
+      assert_raise Color.UnknownSortKeyError, ~r/Unknown sort key/, fn ->
         Color.sort(["red"], by: :nonsense)
       end
     end
@@ -858,7 +938,8 @@ defmodule ColorTest do
         values: [0.0, 1.0, 1.0, 0.0]
       }
 
-      resampled = Color.Spectral.resample(sparse, [400.0, 450.0, 500.0, 550.0, 600.0, 650.0, 700.0])
+      resampled =
+        Color.Spectral.resample(sparse, [400.0, 450.0, 500.0, 550.0, 600.0, 650.0, 700.0])
 
       assert Enum.at(resampled, 0) == 0.0
       assert Enum.at(resampled, 1) == 0.5

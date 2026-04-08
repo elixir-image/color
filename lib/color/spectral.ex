@@ -69,6 +69,7 @@ defmodule Color.Spectral do
       [100.0]
 
   """
+  @spec illuminant(:D65 | :D50 | :A | :E) :: t()
   def illuminant(name) when name in [:D65, :D50, :A, :E] do
     %__MODULE__{
       wavelengths: Tables.wavelengths(),
@@ -96,6 +97,7 @@ defmodule Color.Spectral do
       {81, 81, 81}
 
   """
+  @spec cmf(2 | 10) :: {t(), t(), t()}
   def cmf(observer_angle \\ 2)
 
   def cmf(2), do: unpack_cmf(Tables.cmf_1931())
@@ -161,6 +163,7 @@ defmodule Color.Spectral do
       {1.0985, 1.0, 0.3558}
 
   """
+  @spec to_xyz(t(), keyword()) :: {:ok, Color.XYZ.t()}
   def to_xyz(%__MODULE__{} = spd, options \\ []) do
     observer = Keyword.get(options, :observer, 2)
     illuminant = Keyword.get(options, :illuminant, :D65)
@@ -241,6 +244,7 @@ defmodule Color.Spectral do
       {0.9642, 1.0, 0.8251}
 
   """
+  @spec reflectance_to_xyz(t(), :D65 | :D50 | :A | :E, keyword()) :: {:ok, Color.XYZ.t()}
   def reflectance_to_xyz(%__MODULE__{} = reflectance, illuminant_name \\ :D65, options \\ []) do
     observer = Keyword.get(options, :observer, 2)
 
@@ -308,6 +312,8 @@ defmodule Color.Spectral do
       0.0
 
   """
+  @spec metamerism(t(), t(), :D65 | :D50 | :A | :E, :D65 | :D50 | :A | :E) ::
+          {:ok, float()} | {:error, Exception.t()}
   def metamerism(
         %__MODULE__{} = sample_a,
         %__MODULE__{} = sample_b,
@@ -340,6 +346,7 @@ defmodule Color.Spectral do
   * A list of values corresponding to each grid point.
 
   """
+  @spec resample(t(), [number()]) :: [number()]
   def resample(%__MODULE__{wavelengths: ws, values: vs} = spd, grid) do
     if ws == grid do
       vs

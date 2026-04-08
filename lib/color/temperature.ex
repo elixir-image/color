@@ -44,6 +44,7 @@ defmodule Color.Temperature do
       6503.0
 
   """
+  @spec cct({number(), number()} | Color.input()) :: float() | {:error, Exception.t()}
   def cct({x, y}) when is_number(x) and is_number(y) do
     n = (x - 0.3320) / (0.1858 - y)
     449 * :math.pow(n, 3) + 3525 * :math.pow(n, 2) + 6823.3 * n + 5520.33
@@ -89,6 +90,7 @@ defmodule Color.Temperature do
       {0.4471, 0.4075}
 
   """
+  @spec xy(number()) :: {float(), float()}
   def xy(kelvin) when is_number(kelvin) do
     t = kelvin * 1.0
     if t < 4000, do: planckian(t), else: daylight(t)
@@ -108,6 +110,7 @@ defmodule Color.Temperature do
   * An `{x, y}` tuple.
 
   """
+  @spec planckian(number()) :: {float(), float()}
   def planckian(kelvin) when is_number(kelvin) do
     t = kelvin * 1.0
 
@@ -152,6 +155,7 @@ defmodule Color.Temperature do
   * An `{x, y}` tuple.
 
   """
+  @spec daylight(number()) :: {float(), float()}
   def daylight(kelvin) when is_number(kelvin) do
     t = kelvin * 1.0
 
@@ -190,6 +194,7 @@ defmodule Color.Temperature do
       {0.9502, 1.0, 1.0883}
 
   """
+  @spec xyz(number(), number()) :: Color.XYZ.t()
   def xyz(kelvin, luminance \\ 1.0) do
     {x_chroma, y_chroma} = xy(kelvin)
 

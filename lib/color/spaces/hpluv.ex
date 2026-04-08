@@ -13,7 +13,22 @@ defmodule Color.HPLuv do
 
   """
 
+  @behaviour Color.Behaviour
+
   defstruct [:h, :s, :l, :alpha]
+
+  @typedoc """
+  An HPLuv colour. Like HSLuv but with the chroma component clipped
+  to the largest pastel-friendly chroma at the given lightness.
+  Hue in degrees `[0.0, 360.0)`, saturation and lightness as
+  percentages `[0.0, 100.0]`.
+  """
+  @type t :: %__MODULE__{
+          h: float() | nil,
+          s: float() | nil,
+          l: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   @doc """
   Converts an HPLuv color to `LCHuv`.

@@ -21,7 +21,21 @@ defmodule Color.HSLuv do
 
   """
 
+  @behaviour Color.Behaviour
+
   defstruct [:h, :s, :l, :alpha]
+
+  @typedoc """
+  An HSLuv colour (Boronine 2015). Hue in degrees `[0.0, 360.0)`,
+  saturation and lightness as percentages `[0.0, 100.0]`. Built on
+  CIELUV, perceptually uniform.
+  """
+  @type t :: %__MODULE__{
+          h: float() | nil,
+          s: float() | nil,
+          l: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   @doc """
   Converts an HSLuv color to `LCHuv`.

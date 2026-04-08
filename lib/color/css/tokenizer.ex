@@ -223,7 +223,9 @@ defmodule Color.CSS.Tokenizer do
 
   defp classify_number(token) do
     case Float.parse(token) do
-      {n, ""} -> {:ok, {:number, n}}
+      {n, ""} ->
+        {:ok, {:number, n}}
+
       _ ->
         {:error,
          %Color.ParseError{function: "tokenizer", reason: "invalid number #{inspect(token)}"}}
@@ -232,7 +234,9 @@ defmodule Color.CSS.Tokenizer do
 
   defp classify_percent(token) do
     case Float.parse(String.trim_trailing(token, "%")) do
-      {n, ""} -> {:ok, {:percent, n}}
+      {n, ""} ->
+        {:ok, {:percent, n}}
+
       _ ->
         {:error,
          %Color.ParseError{
@@ -259,7 +263,9 @@ defmodule Color.CSS.Tokenizer do
       end
 
     case Float.parse(num) do
-      {n, ""} -> {:ok, {:hue, n, unit}}
+      {n, ""} ->
+        {:ok, {:hue, n, unit}}
+
       _ ->
         {:error,
          %Color.ParseError{function: "tokenizer", reason: "invalid hue #{inspect(token)}"}}

@@ -9,9 +9,23 @@ defmodule Color.IPT do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:i, :p, :t, :alpha]
+
+  @typedoc """
+  An IPT colour (Ebner & Fairchild 1998), the Oklab predecessor.
+  Components `i` (intensity), `p` (protan-red/green) and `t`
+  (tritan-yellow/blue) are unit-range floats.
+  """
+  @type t :: %__MODULE__{
+          i: float() | nil,
+          p: float() | nil,
+          t: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   # D65 XYZ -> LMS (Hunt-Pointer-Estevez with D65 scaling)
   @m1 [

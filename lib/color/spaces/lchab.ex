@@ -6,9 +6,20 @@ defmodule Color.LCHab do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:l, :c, :h, :alpha, illuminant: :D65, observer_angle: 2]
+
+  @type t :: %__MODULE__{
+          l: number() | nil,
+          c: number() | nil,
+          h: number() | nil,
+          alpha: number() | nil,
+          illuminant: atom(),
+          observer_angle: 2 | 10
+        }
 
   @doc """
   Converts an `LCHab` color to `L*a*b*`.

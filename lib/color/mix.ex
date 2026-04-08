@@ -78,6 +78,8 @@ defmodule Color.Mix do
       {"#ff0000", "#0000ff"}
 
   """
+  @spec mix(Color.input(), Color.input(), number(), keyword()) ::
+          {:ok, Color.SRGB.t()} | {:error, Exception.t()}
   def mix(a, b, t, options \\ []) when is_number(t) do
     space = Keyword.get(options, :in, Color.Oklab)
     hue_mode = Keyword.get(options, :hue, :shorter)
@@ -118,6 +120,8 @@ defmodule Color.Mix do
       5
 
   """
+  @spec gradient(Color.input(), Color.input(), pos_integer(), keyword()) ::
+          {:ok, [Color.SRGB.t()]} | {:error, Exception.t()}
   def gradient(start, stop, steps, options \\ []) when is_integer(steps) and steps >= 2 do
     space = Keyword.get(options, :in, Color.Oklab)
     hue_mode = Keyword.get(options, :hue, :shorter)
@@ -213,10 +217,7 @@ defmodule Color.Mix do
     }
 
   defp interpolate(other, _a, _b, _t, _) do
-    raise ArgumentError,
-          "Color.Mix does not support interpolation in #{inspect(other)}. " <>
-            "Supported: SRGB, AdobeRGB, XYZ, Lab, Luv, Oklab, IPT, JzAzBz, and " <>
-            "the cylindrical spaces (LCHab, LCHuv, Oklch, HSLuv, HPLuv, Hsl, Hsv)."
+    raise %Color.UnknownColorSpaceError{space: other}
   end
 
   defp cylindrical_interpolate(Color.Oklch, a, b, t, hue_mode) do
@@ -271,14 +272,24 @@ defmodule Color.Mix do
   defp cylindrical_interpolate(Color.Hsl, a, b, t, hue_mode) do
     # Hsl hue is 0..1
     h = hue_lerp(a.h * 360, b.h * 360, t, hue_mode) / 360
-    %Color.Hsl{h: h, s: lerp(a.s, b.s, t), l: lerp(a.l, b.l, t),
-               alpha: lerp_alpha(a.alpha, b.alpha, t)}
+
+    %Color.Hsl{
+      h: h,
+      s: lerp(a.s, b.s, t),
+      l: lerp(a.l, b.l, t),
+      alpha: lerp_alpha(a.alpha, b.alpha, t)
+    }
   end
 
   defp cylindrical_interpolate(Color.Hsv, a, b, t, hue_mode) do
     h = hue_lerp(a.h * 360, b.h * 360, t, hue_mode) / 360
-    %Color.Hsv{h: h, s: lerp(a.s, b.s, t), v: lerp(a.v, b.v, t),
-               alpha: lerp_alpha(a.alpha, b.alpha, t)}
+
+    %Color.Hsv{
+      h: h,
+      s: lerp(a.s, b.s, t),
+      v: lerp(a.v, b.v, t),
+      alpha: lerp_alpha(a.alpha, b.alpha, t)
+    }
   end
 
   # ---- primitives -----------------------------------------------------------

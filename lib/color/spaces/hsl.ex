@@ -8,7 +8,21 @@ defmodule Color.Hsl do
 
   """
 
+  @behaviour Color.Behaviour
+
   defstruct [:h, :s, :l, :alpha]
+
+  @typedoc """
+  A non-linear HSL reparameterisation of sRGB. All three components
+  are unit floats: `h` in `[0.0, 1.0]` (one full turn), `s` and `l`
+  in `[0.0, 1.0]`.
+  """
+  @type t :: %__MODULE__{
+          h: float() | nil,
+          s: float() | nil,
+          l: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   @doc """
   Converts an HSL color to sRGB.

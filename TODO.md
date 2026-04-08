@@ -10,7 +10,7 @@ Tier 1 has been implemented — see `Color.Contrast`, `Color.Mix`,
 `Color.Blend`, and the reverse lookups on `Color.CSSNames` and
 `Color.RGB.WorkingSpace`.
 
-Tier 2 items marked ✅ below have been implemented:
+All Tier 2 items have been implemented:
 
 * ✅ Rendering intents in `Color.convert/2,3,4`
   (`:relative_colorimetric`, `:absolute_colorimetric`, `:perceptual`,
@@ -18,36 +18,27 @@ Tier 2 items marked ✅ below have been implemented:
 * ✅ Black point compensation via `Color.XYZ.apply_bpc/3` and the
   `bpc: true` option on `Color.convert`.
 * ✅ Spectral reflectance / SPDs — see `Color.Spectral` and
-  `Color.Spectral.Tables` (CIE 1931 2° and CIE 1964 10° CMFs, D65,
-  D50, A, E illuminants, emissive and reflective integration,
-  metamerism helper).
-* ✅ `Color.luminance/1` at the top level, delegating to
-  `Color.Contrast.relative_luminance/1`.
-* ✅ `Color.sort/2` with `:by` presets (`:luminance`, `:lightness`,
-  `:oklab_l`, `:chroma`, `:oklch_c`, `:hue`, `:oklch_h`, `:hlv`) or
-  a custom sort-key function, plus `:order`.
+  `Color.Spectral.Tables`.
+* ✅ `Color.luminance/1` at the top level.
+* ✅ `Color.sort/2` with `:by` presets.
+* ✅ `Color.ICC.Profile` matrix profile reader (`load/1`, `parse/1`,
+  `to_xyz/2`, `from_xyz/2`). Supports `curv` LUT and `para`
+  parametric TRCs.
+* ✅ `Color.convert_many/2,3,4` batch conversion API.
 
-## Tier 2 — remaining
+## Nice to have — all implemented
 
-### ICC matrix-profile reading
-
-Parse the common ICC v2/v4 "matrix profile" case: the `rXYZ`, `gXYZ`,
-`bXYZ` tags (primary chromaticities expressed as XYZ values in the PCS)
-plus the `rTRC`, `gTRC`, `bTRC` tags (tone response curves, as
-parametric curves or 1D LUTs). That's enough to load `Display P3.icc`,
-`sRGB IEC61966-2.1.icc`, most camera profiles, and most scanner
-profiles. Full ICC v4 CMM is a multi-month project; matrix profiles
-alone are ~500–1000 LOC.
-
-Suggested module: `Color.ICC.Profile`.
-
-### Batch conversion API
-
-`Color.convert_many/2` that takes a list (or stream) of colors and
-applies one conversion. The hot-path should skip per-call overhead:
-compute matrices once, then fold over the list. Genuinely fast for
-megapixel-scale work. An optional `:nx` dep could re-enter here purely
-for the batched path if it ever proves measurably better on large N.
+* ✅ Performance benchmarks — see `bench/conversions.exs`.
+* ✅ Property-based tests — see `test/property_test.exs` (58
+  properties covering round-trip identity, alpha preservation, hue
+  wrap-around, gamut mapping invariance, ΔE symmetry, mix endpoint
+  identity, and WCAG contrast bounds).
+* ✅ `Color.Behaviour` declaring `to_xyz/1` and `from_xyz/1`
+  callbacks; 20 of 21 space modules conform.
+* ✅ Batch conversion API.
+* ✅ ICC matrix-profile reader.
+* ✅ API symmetry — `convert/3` accepts `working_space:` in its
+  options keyword, with `convert/4` retained as positional sugar.
 
 ## Tier 3 — domain-specific or niche
 

@@ -1,5 +1,4 @@
 defmodule Color.RGB.WorkingSpace do
-
   # RGB Observer angle is CIE1931 2°
   @rgb_observer_angle 2
 
@@ -51,28 +50,28 @@ defmodule Color.RGB.WorkingSpace do
   """
 
   @rgb_working_space @rgb_working_space_table
-    |> String.split("\n", trim: true)
-    |> Enum.reject(&String.starts_with?(&1, "#"))
-    |> Enum.map(fn line ->
-      [working_space, gamma, illuminant | data] =
-        line
-        |> String.split("#")
-        |> hd()
-        |> String.split("\s", trim: true)
-        |> Enum.map(fn elem ->
-          case Float.parse(elem) do
-            {float, ""} -> float
-            :error -> elem
-          end
-        end)
+                     |> String.split("\n", trim: true)
+                     |> Enum.reject(&String.starts_with?(&1, "#"))
+                     |> Enum.map(fn line ->
+                       [working_space, gamma, illuminant | data] =
+                         line
+                         |> String.split("#")
+                         |> hd()
+                         |> String.split("\s", trim: true)
+                         |> Enum.map(fn elem ->
+                           case Float.parse(elem) do
+                             {float, ""} -> float
+                             :error -> elem
+                           end
+                         end)
 
-      {:ok, illuminant} = Color.Tristimulus.validate_illuminant(illuminant)
-      [ρ, γ, β] = Enum.chunk_every(data, 3)
-      data = %{gamma: gamma, illuminant: illuminant, ρ: ρ, γ: γ, β: β}
+                       {:ok, illuminant} = Color.Tristimulus.validate_illuminant(illuminant)
+                       [ρ, γ, β] = Enum.chunk_every(data, 3)
+                       data = %{gamma: gamma, illuminant: illuminant, ρ: ρ, γ: γ, β: β}
 
-      {String.to_atom(working_space), data}
-    end)
-    |> Map.new()
+                       {String.to_atom(working_space), data}
+                     end)
+                     |> Map.new()
 
   @rgb_working_space_names Map.keys(@rgb_working_space)
 
@@ -113,6 +112,7 @@ defmodule Color.RGB.WorkingSpace do
       {:ok, :SRGB}
 
   """
+  @spec from_css_name(String.t()) :: {:ok, atom()} | {:error, Exception.t()}
   def from_css_name(name) when is_binary(name) do
     case Map.fetch(@css_names, String.downcase(name)) do
       {:ok, atom} -> {:ok, atom}
@@ -144,6 +144,7 @@ defmodule Color.RGB.WorkingSpace do
       nil
 
   """
+  @spec to_css_name(atom()) :: String.t() | nil
   def to_css_name(atom) when is_atom(atom) do
     @css_names
     |> Enum.find(fn {_, a} -> a == atom end)
@@ -177,7 +178,37 @@ defmodule Color.RGB.WorkingSpace do
       0.4125
 
   """
+  @spec rgb_conversion_matrix(atom()) ::
+          {:ok,
+           %{
+             to_xyz: list(),
+             from_xyz: list(),
+             illuminant: atom(),
+             observer_angle: 2 | 10,
+             gamma: term()
+           }}
+          | {:error, Exception.t()}
   def rgb_conversion_matrix(rgb_space) when rgb_space in @rgb_working_space_names do
+    case :persistent_term.get({__MODULE__, :matrix, rgb_space}, :__uncached__) do
+      :__uncached__ ->
+        result = compute_conversion_matrix(rgb_space)
+        :persistent_term.put({__MODULE__, :matrix, rgb_space}, result)
+        result
+
+      cached ->
+        cached
+    end
+  end
+
+  def rgb_conversion_matrix(rgb_space) do
+    {:error,
+     %Color.UnknownWorkingSpaceError{
+       working_space: rgb_space,
+       valid: @rgb_working_space_names
+     }}
+  end
+
+  defp compute_conversion_matrix(rgb_space) do
     {:ok, working_space} = Map.fetch(rgb_working_spaces(), rgb_space)
 
     primaries = {
@@ -186,10 +217,11 @@ defmodule Color.RGB.WorkingSpace do
       List.to_tuple(Enum.take(working_space.β, 2))
     }
 
-    wr = Color.Tristimulus.reference_white_tuple(
-      illuminant: working_space.illuminant,
-      observer_angle: @rgb_observer_angle
-    )
+    wr =
+      Color.Tristimulus.reference_white_tuple(
+        illuminant: working_space.illuminant,
+        observer_angle: @rgb_observer_angle
+      )
 
     m = Color.Conversion.Lindbloom.working_space_matrix(primaries, wr)
     mi = Color.Conversion.Lindbloom.invert3(m)
@@ -201,14 +233,6 @@ defmodule Color.RGB.WorkingSpace do
        illuminant: working_space.illuminant,
        observer_angle: @rgb_observer_angle,
        gamma: working_space.gamma
-     }}
-  end
-
-  def rgb_conversion_matrix(rgb_space) do
-    {:error,
-     %Color.UnknownWorkingSpaceError{
-       working_space: rgb_space,
-       valid: @rgb_working_space_names
      }}
   end
 end

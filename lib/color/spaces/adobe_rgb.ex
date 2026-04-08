@@ -8,9 +8,18 @@ defmodule Color.AdobeRGB do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:r, :g, :b, :alpha]
+
+  @type t :: %__MODULE__{
+          r: number() | nil,
+          g: number() | nil,
+          b: number() | nil,
+          alpha: number() | nil
+        }
 
   @gamma 2.19921875
 

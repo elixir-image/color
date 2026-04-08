@@ -11,13 +11,36 @@ defmodule Color.MixProject do
       elixir: "~> 1.17",
       package: package(),
       docs: docs(),
+      dialyzer: dialyzer(),
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
   end
 
+  defp dialyzer do
+    [
+      plt_add_apps: [:mix],
+      plt_core_path: "_build/#{Mix.env()}",
+      flags: [
+        :error_handling,
+        :unknown,
+        :unmatched_returns,
+        :extra_return,
+        :missing_return
+      ]
+    ]
+  end
+
   def description do
-    "Color definition, conversion and calculation"
+    """
+    A comprehensive color library: 21 color spaces (CIE, Oklab/Oklch,
+    JzAzBz, ICtCp, IPT, CAM16-UCS, sRGB / Adobe RGB / Display P3 /
+    Rec.2020 / ProPhoto, HSL / HSV / HSLuv, CMYK, YCbCr, …),
+    chromatic adaptation, ICC rendering intents, ΔE2000 / WCAG / APCA
+    contrast, gamut mapping, color mixing and gradients, blend modes,
+    color harmonies, color temperature, the spectral pipeline, and a
+    full CSS Color 4 / 5 parser. Zero runtime dependencies.
+    """
   end
 
   defp package do
@@ -25,6 +48,7 @@ defmodule Color.MixProject do
       maintainers: ["Kip Cole"],
       licenses: ["Apache-2.0"],
       links: links(),
+      source_url: "https://github.com/elixir-image/color",
       files: [
         "lib",
         "mix.exs",
@@ -39,7 +63,7 @@ defmodule Color.MixProject do
     %{
       "GitHub" => "https://github.com/elixir-image/color",
       "Readme" => "https://github.com/elixir-image/color/blob/v#{@version}/README.md",
-      "Changelog" => "https://github.com/elixir-image/color/blob/v#{@version}/CHANGELOG.md",
+      "Changelog" => "https://github.com/elixir-image/color/blob/v#{@version}/CHANGELOG.md"
     }
   end
 
@@ -86,7 +110,9 @@ defmodule Color.MixProject do
       ],
       "CSS Colors": [Color.CSS, Color.CSSNames],
       "Conversion Math": ~r/Color.Conversion/,
-      "Helpers": [
+      ICC: ~r/Color\.ICC/,
+      Exceptions: ~r/Color\.[A-Z]\w*Error$/,
+      Helpers: [
         Color.HSLuv.Gamut,
         Color.RGB.WorkingSpace,
         Color.Spectral.Tables
@@ -102,7 +128,10 @@ defmodule Color.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.32", only: [:dev]}
+      {:ex_doc, "~> 0.32", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:benchee, "~> 1.3", only: [:dev], runtime: false},
+      {:stream_data, "~> 1.1", only: [:test], runtime: false}
     ]
   end
 end

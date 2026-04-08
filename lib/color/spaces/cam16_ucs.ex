@@ -22,9 +22,23 @@ defmodule Color.CAM16UCS do
 
   """
 
+  @behaviour Color.Behaviour
+
   alias Color.Conversion.Lindbloom
 
   defstruct [:j, :a, :b, :alpha]
+
+  @typedoc """
+  A `Color.CAM16UCS` colour. The CAM16-UCS uniform space coordinates:
+  `j` is lightness in `[0, 100]`, `a` and `b` are red-green and
+  yellow-blue chromatic coordinates.
+  """
+  @type t :: %__MODULE__{
+          j: float() | nil,
+          a: float() | nil,
+          b: float() | nil,
+          alpha: Color.Types.alpha()
+        }
 
   # CAT16 cone matrix
   @mcat16 [
@@ -139,8 +153,10 @@ defmodule Color.CAM16UCS do
     j = 100 * :math.pow(max(aa_big / a_w, 0), c * z_exp)
 
     et = (:math.cos(h_rad + 2) + 3.8) / 4
-    t = 50_000 / 13 * nc * ncb * et * :math.sqrt(a * a + b * b) /
-          (ra + ga + 21 * ba / 20)
+
+    t =
+      50_000 / 13 * nc * ncb * et * :math.sqrt(a * a + b * b) /
+        (ra + ga + 21 * ba / 20)
 
     c_cam =
       :math.pow(max(t, 0), 0.9) * :math.sqrt(max(j, 0) / 100) *
@@ -269,8 +285,11 @@ defmodule Color.CAM16UCS do
     d_b = d * yw / bw + 1 - d
 
     k = 1 / (5 * la + 1)
-    fl = 0.2 * :math.pow(k, 4) * 5 * la + 0.1 * :math.pow(1 - :math.pow(k, 4), 2) *
-           :math.pow(5 * la, 1 / 3)
+
+    fl =
+      0.2 * :math.pow(k, 4) * 5 * la +
+        0.1 * :math.pow(1 - :math.pow(k, 4), 2) *
+          :math.pow(5 * la, 1 / 3)
 
     n = yb / yw
     z_exp = 1.48 + :math.sqrt(n)

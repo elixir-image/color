@@ -197,6 +197,8 @@ defmodule Color.CSSNames do
       {:ok, {0, 177, 64}}
 
   """
+  @spec lookup(atom() | String.t()) ::
+          {:ok, {0..255, 0..255, 0..255}} | {:error, Exception.t()}
   def lookup(name) when is_atom(name), do: lookup(Atom.to_string(name))
 
   def lookup(name) when is_binary(name) do
@@ -228,6 +230,7 @@ defmodule Color.CSSNames do
       "rebeccapurple"
 
   """
+  @spec normalize(String.t()) :: String.t()
   def normalize(name) when is_binary(name) do
     name
     |> String.downcase()
@@ -257,6 +260,7 @@ defmodule Color.CSSNames do
       false
 
   """
+  @spec known?(atom() | String.t()) :: boolean()
   def known?(name) when is_atom(name), do: known?(Atom.to_string(name))
   def known?(name) when is_binary(name), do: Map.has_key?(@names, normalize(name))
 
@@ -279,6 +283,8 @@ defmodule Color.CSSNames do
       "red"
 
   """
+  @spec nearest(Color.input()) ::
+          {:ok, {String.t(), Color.SRGB.t(), float()}} | {:error, Exception.t()}
   def nearest(input) do
     with {:ok, source} <- Color.new(input) do
       {name, rgb, de} =
@@ -301,6 +307,7 @@ defmodule Color.CSSNames do
   * A map.
 
   """
+  @spec all() :: %{String.t() => {0..255, 0..255, 0..255}}
   def all, do: @names
 
   @doc """
@@ -311,5 +318,6 @@ defmodule Color.CSSNames do
   * A sorted list of strings.
 
   """
+  @spec names() :: [String.t()]
   def names, do: @names |> Map.keys() |> Enum.sort()
 end
