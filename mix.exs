@@ -1,7 +1,7 @@
 defmodule Color.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.3.0"
   def project do
     [
       app: :color,
@@ -113,6 +113,7 @@ defmodule Color.MixProject do
         Color.CSS.Calc
       ],
       "Conversion Math": ~r/Color.Conversion/,
+      ANSI: [Color.ANSI],
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [

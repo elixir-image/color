@@ -1699,6 +1699,49 @@ defmodule Color do
   end
 
   @doc """
+  Serialises a colour as an ANSI SGR escape sequence for terminal
+  output.
+
+  Accepts any input `Color.new/1` accepts and delegates to
+  `Color.ANSI.to_string/2`.
+
+  ### Arguments
+
+  * `color` is any input accepted by `new/1`.
+
+  * `options` is a keyword list. See `Color.ANSI.to_string/2` for
+    the full set of options:
+
+    * `:mode` — `:truecolor` (default), `:ansi256`, or `:ansi16`.
+
+    * `:layer` — `:foreground` (default) or `:background`.
+
+  ### Returns
+
+  * A binary string containing the escape sequence.
+
+  ### Examples
+
+      iex> Color.to_ansi("red") == "\\e[38;2;255;0;0m"
+      true
+
+      iex> Color.to_ansi("red", mode: :ansi256) == "\\e[38;5;196m"
+      true
+
+      iex> Color.to_ansi("red", mode: :ansi16) == "\\e[91m"
+      true
+
+      iex> Color.to_ansi("red", layer: :background) == "\\e[48;2;255;0;0m"
+      true
+
+      iex> Color.to_ansi(%Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}) == "\\e[38;2;255;0;0m"
+      true
+
+  """
+  @spec to_ansi(input(), keyword()) :: String.t()
+  defdelegate to_ansi(color, options \\ []), to: Color.ANSI, as: :to_string
+
+  @doc """
   Sorts a list of colors by a perceptual criterion.
 
   ### Arguments

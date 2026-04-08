@@ -32,6 +32,7 @@ defmodule ColorTest do
   doctest Color.IPT
   doctest Color.CAM16UCS
   doctest Color.CSS.Names
+  doctest Color.ANSI
   doctest Color.Contrast
   doctest Color.Spectral
   doctest Color.Mix
@@ -635,6 +636,171 @@ defmodule ColorTest do
     end
   end
 
+  describe "Color.ANSI" do
+    test "to_string/2 truecolor foreground" do
+      assert Color.ANSI.to_string("red") == "\e[38;2;255;0;0m"
+      assert Color.ANSI.to_string("#00ff00") == "\e[38;2;0;255;0m"
+      assert Color.ANSI.to_string([0, 0, 255]) == "\e[38;2;0;0;255m"
+    end
+
+    test "to_string/2 truecolor background" do
+      assert Color.ANSI.to_string("red", layer: :background) == "\e[48;2;255;0;0m"
+    end
+
+    test "to_string/2 ansi256" do
+      assert Color.ANSI.to_string("red", mode: :ansi256) == "\e[38;5;196m"
+      assert Color.ANSI.to_string("black", mode: :ansi256) == "\e[38;5;0m"
+      # Pure white is an exact match for both palette index 15 (bright
+      # white) and 231 (cube corner). Either is acceptable — the
+      # encoder picks whichever comes first.
+      assert Color.ANSI.to_string("white", mode: :ansi256) in [
+               "\e[38;5;15m",
+               "\e[38;5;231m"
+             ]
+
+      # Background form
+      assert Color.ANSI.to_string("red", mode: :ansi256, layer: :background) ==
+               "\e[48;5;196m"
+    end
+
+    test "to_string/2 ansi16" do
+      # Pure red maps to bright red (index 9) rather than dim red (1)
+      # because (255, 0, 0) is perceptually closer to (255, 85, 85)
+      # than to (170, 0, 0).
+      assert Color.ANSI.to_string("red", mode: :ansi16) == "\e[91m"
+
+      # Background form uses 101 rather than 91
+      assert Color.ANSI.to_string("red", mode: :ansi16, layer: :background) ==
+               "\e[101m"
+
+      # Dim red matches the standard palette
+      dim = %Color.SRGB{r: 170 / 255, g: 0.0, b: 0.0}
+      assert Color.ANSI.to_string(dim, mode: :ansi16) == "\e[31m"
+    end
+
+    test "to_string/2 converts non-sRGB inputs" do
+      lab_red = %Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}
+      assert Color.ANSI.to_string(lab_red) == "\e[38;2;255;0;0m"
+    end
+
+    test "to_string/2 raises on unknown mode" do
+      assert_raise ArgumentError, ~r/Unknown Color.ANSI mode/, fn ->
+        Color.ANSI.to_string("red", mode: :nonsense)
+      end
+    end
+
+    test "parse/1 16-colour foreground" do
+      assert {:ok, %Color.SRGB{} = c, :foreground} = Color.ANSI.parse("\e[31m")
+      assert Color.to_hex(c) == "#aa0000"
+    end
+
+    test "parse/1 16-colour background" do
+      assert {:ok, _c, :background} = Color.ANSI.parse("\e[41m")
+    end
+
+    test "parse/1 bright 16-colour" do
+      assert {:ok, c, :foreground} = Color.ANSI.parse("\e[91m")
+      assert Color.to_hex(c) == "#ff5555"
+
+      assert {:ok, _, :background} = Color.ANSI.parse("\e[101m")
+    end
+
+    test "parse/1 256-colour" do
+      assert {:ok, c, :foreground} = Color.ANSI.parse("\e[38;5;196m")
+      assert Color.to_hex(c) == "#ff0000"
+
+      assert {:ok, c, :background} = Color.ANSI.parse("\e[48;5;21m")
+      # Cube index 21 = (0, 0, 255)
+      assert Color.to_hex(c) == "#0000ff"
+    end
+
+    test "parse/1 truecolor" do
+      assert {:ok, c, :foreground} = Color.ANSI.parse("\e[38;2;123;45;67m")
+      assert Color.to_hex(c) == "#7b2d43"
+    end
+
+    test "parse/1 ignores style parameters before the colour" do
+      assert {:ok, c, :foreground} = Color.ANSI.parse("\e[1;31m")
+      assert Color.to_hex(c) == "#aa0000"
+    end
+
+    test "parse/1 ignores style parameters after the colour" do
+      assert {:ok, c, :foreground} = Color.ANSI.parse("\e[31;1m")
+      assert Color.to_hex(c) == "#aa0000"
+    end
+
+    test "parse/1 returns an error on the reset sequence" do
+      assert {:error, %Color.ANSI.ParseError{reason: :no_colour_param}} =
+               Color.ANSI.parse("\e[0m")
+    end
+
+    test "parse/1 returns an error on a bold-only sequence" do
+      assert {:error, %Color.ANSI.ParseError{reason: :no_colour_param}} =
+               Color.ANSI.parse("\e[1m")
+    end
+
+    test "parse/1 returns an error when the sequence is missing the CSI" do
+      assert {:error, %Color.ANSI.ParseError{reason: :no_csi}} =
+               Color.ANSI.parse("31m")
+    end
+
+    test "parse/1 returns an error when the sequence is missing the terminator" do
+      assert {:error, %Color.ANSI.ParseError{reason: :no_terminator}} =
+               Color.ANSI.parse("\e[31")
+    end
+
+    test "parse/1 returns an error on an out-of-range 256-colour index" do
+      assert {:error, %Color.ANSI.ParseError{reason: :bad_index}} =
+               Color.ANSI.parse("\e[38;5;999m")
+    end
+
+    test "parse/1 returns an error on out-of-range truecolor bytes" do
+      assert {:error, %Color.ANSI.ParseError{reason: :bad_rgb}} =
+               Color.ANSI.parse("\e[38;2;300;0;0m")
+    end
+
+    test "to_string/2 |> parse/1 round-trip (truecolor)" do
+      for hex <- ["#ff0000", "#00ff00", "#0000ff", "#abcdef", "#123456"] do
+        encoded = Color.ANSI.to_string(hex)
+        assert {:ok, srgb, :foreground} = Color.ANSI.parse(encoded)
+        assert Color.to_hex(srgb) == hex
+      end
+    end
+
+    test "wrap/3 wraps text in colour + reset" do
+      assert Color.ANSI.wrap("hello", "red") ==
+               "\e[38;2;255;0;0mhello\e[0m"
+
+      assert Color.ANSI.wrap("hi", "red", mode: :ansi16) ==
+               "\e[91mhi\e[0m"
+    end
+
+    test "nearest_256 and nearest_16 return sane values" do
+      assert Color.ANSI.nearest_256("#ff0000") == 196
+      assert Color.ANSI.nearest_256("#000000") == 0
+      # Pure white is an exact match for both 15 (bright white) and
+      # 231 (cube corner).
+      assert Color.ANSI.nearest_256("#ffffff") in [15, 231]
+      assert Color.ANSI.nearest_256([128, 128, 128]) in 240..248
+
+      assert Color.ANSI.nearest_16("#000000") == 0
+      assert Color.ANSI.nearest_16("#ffffff") == 15
+    end
+
+    test "palette_256/0 and palette_16/0 return the expected data" do
+      assert length(Color.ANSI.palette_256()) == 256
+      assert length(Color.ANSI.palette_16()) == 16
+
+      # Cube index 21 = (0, 0, 255)
+      assert Enum.find(Color.ANSI.palette_256(), &match?({21, _}, &1)) ==
+               {21, {0, 0, 255}}
+
+      # Last grayscale entry is index 255 = (238, 238, 238)
+      assert Enum.find(Color.ANSI.palette_256(), &match?({255, _}, &1)) ==
+               {255, {238, 238, 238}}
+    end
+  end
+
   describe "Color.to_hex/1 and Color.to_css/1,2" do
     test "to_hex accepts any input form" do
       assert Color.to_hex("#ff0000") == "#ff0000"
@@ -695,6 +861,23 @@ defmodule ColorTest do
     test "to_css raises a typed exception on invalid input" do
       assert_raise Color.InvalidComponentError, fn ->
         Color.to_css([300, 0, 0])
+      end
+    end
+
+    test "to_ansi delegates to Color.ANSI.to_string" do
+      assert Color.to_ansi("red") == Color.ANSI.to_string("red")
+      assert Color.to_ansi("red", mode: :ansi256) == "\e[38;5;196m"
+      assert Color.to_ansi("red", mode: :ansi16) == "\e[91m"
+      assert Color.to_ansi("red", layer: :background) == "\e[48;2;255;0;0m"
+
+      # Accepts non-sRGB input via new/1
+      lab_red = %Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}
+      assert Color.to_ansi(lab_red) == "\e[38;2;255;0;0m"
+    end
+
+    test "to_ansi raises a typed exception on invalid input" do
+      assert_raise Color.InvalidComponentError, fn ->
+        Color.to_ansi([1.5, 0.0, 0.0])
       end
     end
   end
