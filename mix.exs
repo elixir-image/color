@@ -36,7 +36,7 @@ defmodule Color.MixProject do
     A comprehensive color library: 21 color spaces,
     chromatic adaptation, ICC rendering intents, ΔE2000 / WCAG / APCA
     contrast, gamut mapping, color mixing and gradients, blend modes,
-    color harmonies, color temperature, the spectral pipeline, and a
+    color harmonies, color temperature, spectral pipeline, and a
     full CSS Color 4 / 5 parser. Zero runtime dependencies.
     """
   end
@@ -106,11 +106,17 @@ defmodule Color.MixProject do
         Color.XYZ,
         Color.YCbCr
       ],
-      "CSS Colors": [Color.CSS, Color.CSSNames],
+      "CSS Colors": [
+        Color.CSS,
+        Color.CSSNames,
+        Color.CSS.Tokenizer,
+        Color.CSS.Calc
+      ],
       "Conversion Math": ~r/Color.Conversion/,
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [
+        Color.Types,
         Color.HSLuv.Gamut,
         Color.RGB.WorkingSpace,
         Color.Spectral.Tables

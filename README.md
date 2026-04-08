@@ -37,7 +37,7 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 
 * **CSS Color Module Level 4 / 5**. Full parser and serialiser for hex, named colors, `rgb()/rgba()`, `hsl()/hsla()`, `hwb()`, `lab()`, `lch()`, `oklab()`, `oklch()`, `color(srgb|display-p3|rec2020|…)`, `device-cmyk()`, `color-mix()`, relative color syntax, `none` keyword, and `calc()` expressions.
 
-* **`~COLOR` sigil** (Elixir 1.15+) for compile-time color literals in any supported space.
+* **`~COLOR` sigil** for compile-time color literals in any supported space.
 
 * **Spectral pipeline**. `Color.Spectral` and `Color.Spectral.Tables` provide the CIE 1931 2° and CIE 1964 10° standard observer CMFs, the D65 / D50 / A / E illuminant SPDs, emissive and reflective integration to XYZ, and a metamerism helper.
 
@@ -48,8 +48,6 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 * **Pre-multiplied alpha helpers**. `Color.premultiply/1` and `Color.unpremultiply/1` for callers that need to round-trip pre-multiplied pixel data through the conversion pipeline.
 
 * **Typed errors**. Every fallible function returns `{:ok, color}` or `{:error, %SomeError{...}}` where the exception struct carries the offending value, the space, the reason, and any other relevant fields. See `Color.InvalidColorError`, `Color.InvalidComponentError`, `Color.UnknownColorSpaceError`, `Color.UnknownColorNameError`, `Color.UnknownWorkingSpaceError`, `Color.InvalidHexError`, `Color.ParseError`, `Color.UnknownBlendModeError`, `Color.UnknownGamutMethodError`, `Color.MissingWorkingSpaceError`, `Color.UnsupportedTargetError`, `Color.ICC.ParseError`.
-
-* **Zero runtime dependencies**. The only entries in `mix.exs` are `:ex_doc`, `:dialyxir`, `:benchee`, and `:stream_data`, all `dev`/`test`-only.
 
 ## Supported Elixir and OTP Releases
 
@@ -134,7 +132,7 @@ Color.CSS.to_css(c)
 {:ok, c} = Color.CSS.parse("rgb(from oklch(0.7 0.15 180) calc(r * 0.9) g b)")
 ```
 
-### Sigil (Elixir 1.15+)
+### ~COLOR Sigil
 
 ```elixir
 import Color.Sigil
@@ -150,7 +148,7 @@ import Color.Sigil
 ### Spectral
 
 ```elixir
-d65       = Color.Spectral.illuminant(:D65)
+d65 = Color.Spectral.illuminant(:D65)
 {:ok, white_xyz} = Color.Spectral.to_xyz(d65)
 # => Color.XYZ at D65 white point
 
@@ -178,7 +176,7 @@ profile.description
 
 ## Documentation
 
-See the module documentation on [HexDocs](https://hexdocs.pm/color) once published. The full top-level documentation in the `Color` module describes the list-input validation rules, alpha handling, the supported color spaces, and the chromatic adaptation / rendering-intent options.
+See the module documentation on [HexDocs](https://hexdocs.pm/color).
 
 ## License
 
