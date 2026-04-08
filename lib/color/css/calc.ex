@@ -197,8 +197,7 @@ defmodule Color.CSS.Calc do
   defp apply_op(:+, l, r), do: {:ok, l + r}
   defp apply_op(:-, l, r), do: {:ok, l - r}
   defp apply_op(:*, l, r), do: {:ok, l * r}
-  defp apply_op(:/, _l, +0.0), do: {:error, calc_error("division by zero")}
-  defp apply_op(:/, _l, -0.0), do: {:error, calc_error("division by zero")}
+  defp apply_op(:/, _l, r) when r == 0, do: {:error, calc_error("division by zero")}
   defp apply_op(:/, l, r), do: {:ok, l / r}
 
   # ---- tokenizer -----------------------------------------------------------
