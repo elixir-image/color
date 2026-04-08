@@ -303,9 +303,10 @@ defmodule Color.ICC.Profile do
   # ----- tag readers ----------------------------------------------------
 
   defp read_xyz(binary, {offset, size}) when size >= 20 do
-    case binary do
-      <<_::binary-size(offset), "XYZ ", 0::32, x::32-signed, y::32-signed, z::32-signed,
-        _rest::binary>> ->
+    tag = :binary.part(binary, offset, size)
+
+    case tag do
+      <<"XYZ ", 0::32, x::32-signed, y::32-signed, z::32-signed, _rest::binary>> ->
         {:ok, {s15_fixed_16(x), s15_fixed_16(y), s15_fixed_16(z)}}
 
       _ ->
@@ -315,9 +316,11 @@ defmodule Color.ICC.Profile do
 
   defp read_xyz(_, _), do: {:error, %Color.ICC.ParseError{reason: :bad_xyz_tag}}
 
-  defp read_trc(binary, {offset, _size}) do
-    case binary do
-      <<_::binary-size(offset), "curv", 0::32, count::32, rest::binary>> ->
+  defp read_trc(binary, {offset, size}) do
+    tag = :binary.part(binary, offset, size)
+
+    case tag do
+      <<"curv", 0::32, count::32, rest::binary>> ->
         case count do
           0 ->
             {:ok, {:gamma, 1.0}}
@@ -332,7 +335,7 @@ defmodule Color.ICC.Profile do
             {:ok, {:lut, entries}}
         end
 
-      <<_::binary-size(offset), "para", 0::32, type::16, _reserved::16, rest::binary>> ->
+      <<"para", 0::32, type::16, _reserved::16, rest::binary>> ->
         params = read_para_params(type, rest)
         {:ok, {:parametric, parametric_type(type), params}}
 
@@ -361,25 +364,24 @@ defmodule Color.ICC.Profile do
   defp parametric_type(3), do: :iec61966_2_1
   defp parametric_type(4), do: :extended
 
-  defp read_desc(binary, {offset, _size}) do
-    case binary do
-      <<_::binary-size(offset), "mluc", 0::32, _records::32, _rec_size::32, rest::binary>> ->
-        # First record: lang(2) country(2) length(4) offset(4)
+  defp read_desc(binary, {offset, size}) do
+    tag = :binary.part(binary, offset, size)
+
+    case tag do
+      <<"mluc", 0::32, _records::32, _rec_size::32, rest::binary>> ->
+        # First record: lang(2) country(2) length(4) offset(4 — relative to start of tag)
         <<_lang::16, _country::16, length::32, str_offset::32, _::binary>> = rest
 
         text =
-          binary
-          |> :binary.part(offset + str_offset, length)
+          tag
+          |> :binary.part(str_offset, length)
           |> :unicode.characters_to_binary({:utf16, :big})
 
         {:ok, text}
 
-      <<_::binary-size(offset), "desc", 0::32, length::32, rest::binary>> ->
+      <<"desc", 0::32, length::32, rest::binary>> ->
         # ASCII description
-        text =
-          rest
-          |> :binary.part(0, max(length - 1, 0))
-
+        text = :binary.part(rest, 0, max(length - 1, 0))
         {:ok, text}
 
       _ ->

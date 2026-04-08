@@ -596,10 +596,6 @@ defmodule Color do
     {:error, %Color.InvalidComponentError{space: "xyY", value: list, reason: :wrong_count}}
   end
 
-  defp build(other, _list) do
-    {:error, %Color.UnknownColorSpaceError{space: other}}
-  end
-
   defp strict_rgb(list, module, label) when length(list) in [3, 4] do
     cond do
       Enum.all?(list, &is_integer/1) ->
