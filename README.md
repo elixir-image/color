@@ -178,6 +178,16 @@ profile.description
 
 See the module documentation on [HexDocs](https://hexdocs.pm/color).
 
+## Contributing
+
+A `mix format` pre-commit hook is committed under `.githooks/`. Enable it once per clone with:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+The hook formats every staged `.ex` / `.exs` file with `mix format` and re-stages the result, so commits never include unformatted code.
+
 ## License
 
 Apache 2.0. See [LICENSE.md](LICENSE.md) for the full text.

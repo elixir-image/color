@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: format Elixir source with `mix format`, then
+# re-stage any files the formatter touched. Aborts the commit if
+# `mix format` itself fails.
+#
+# To enable for this clone, run:
+#
+#   git config core.hooksPath .githooks
+
+set -euo pipefail
+
+# Collect the staged Elixir files (.ex, .exs) so we only format
+# what's actually being committed.
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep -E '\.(ex|exs)$' || true)
+
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
+
+# Resolve `mix` from PATH or fall back to mise.
+if command -v mix >/dev/null 2>&1; then
+  MIX=mix
+elif command -v mise >/dev/null 2>&1; then
+  MIX="mise exec -- mix"
+else
+  echo "pre-commit: cannot find mix on PATH" >&2
+  exit 1
+fi
+
+# Format only the staged files. mix format reads .formatter.exs
+# from the project root, so it picks up the project's settings.
+echo "$staged_files" | xargs $MIX format
+
+# Re-stage the (possibly reformatted) files so the commit captures
+# the formatted versions, not the original.
+echo "$staged_files" | xargs git add
+
+exit 0
