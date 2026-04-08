@@ -161,7 +161,7 @@ defmodule Color.SRGB do
   * `#RRGGBBAA` — 8-bit per channel with alpha.
 
   The leading `#` is optional. Parsing is case-insensitive. Any other
-  string is looked up in `Color.CSSNames`, so named colors like
+  string is looked up in `Color.CSS.Names`, so named colors like
   `"rebeccapurple"` also work.
 
   ### Arguments
@@ -201,7 +201,7 @@ defmodule Color.SRGB do
         parse_hex(string)
 
       true ->
-        with {:ok, rgb} <- Color.CSSNames.lookup(string) do
+        with {:ok, rgb} <- Color.CSS.Names.lookup(string) do
           {:ok, unscale255(rgb)}
         end
     end

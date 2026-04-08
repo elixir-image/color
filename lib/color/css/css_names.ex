@@ -1,4 +1,4 @@
-defmodule Color.CSSNames do
+defmodule Color.CSS.Names do
   @moduledoc """
   The 148 named colors defined by CSS Color Module Level 4, mapped to
   their 8-bit sRGB values.
@@ -184,16 +184,16 @@ defmodule Color.CSSNames do
 
   ### Examples
 
-      iex> Color.CSSNames.lookup("rebeccapurple")
+      iex> Color.CSS.Names.lookup("rebeccapurple")
       {:ok, {102, 51, 153}}
 
-      iex> Color.CSSNames.lookup("Red")
+      iex> Color.CSS.Names.lookup("Red")
       {:ok, {255, 0, 0}}
 
-      iex> Color.CSSNames.lookup(:misty_rose)
+      iex> Color.CSS.Names.lookup(:misty_rose)
       {:ok, {255, 228, 225}}
 
-      iex> Color.CSSNames.lookup("chroma green")
+      iex> Color.CSS.Names.lookup("chroma green")
       {:ok, {0, 177, 64}}
 
   """
@@ -223,10 +223,10 @@ defmodule Color.CSSNames do
 
   ### Examples
 
-      iex> Color.CSSNames.normalize("Misty Rose")
+      iex> Color.CSS.Names.normalize("Misty Rose")
       "mistyrose"
 
-      iex> Color.CSSNames.normalize("rebecca-purple")
+      iex> Color.CSS.Names.normalize("rebecca-purple")
       "rebeccapurple"
 
   """
@@ -250,13 +250,13 @@ defmodule Color.CSSNames do
 
   ### Examples
 
-      iex> Color.CSSNames.known?("red")
+      iex> Color.CSS.Names.known?("red")
       true
 
-      iex> Color.CSSNames.known?(:misty_rose)
+      iex> Color.CSS.Names.known?(:misty_rose)
       true
 
-      iex> Color.CSSNames.known?("notacolor")
+      iex> Color.CSS.Names.known?("notacolor")
       false
 
   """
@@ -278,7 +278,7 @@ defmodule Color.CSSNames do
 
   ### Examples
 
-      iex> {:ok, {name, _srgb, _de}} = Color.CSSNames.nearest(%Color.SRGB{r: 1.0, g: 0.01, b: 0.0})
+      iex> {:ok, {name, _srgb, _de}} = Color.CSS.Names.nearest(%Color.SRGB{r: 1.0, g: 0.01, b: 0.0})
       iex> name
       "red"
 

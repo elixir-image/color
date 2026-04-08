@@ -493,7 +493,7 @@ defmodule Color do
   end
 
   def new(name, _space) when is_atom(name) and name not in [nil, true, false] do
-    case Color.CSSNames.lookup(name) do
+    case Color.CSS.Names.lookup(name) do
       {:ok, rgb} -> {:ok, Color.SRGB.unscale255(rgb)}
       {:error, _} = err -> err
     end
@@ -1456,11 +1456,11 @@ defmodule Color do
   """
   @spec css_name?(any()) :: boolean()
   def css_name?(value) when is_atom(value) and value not in [nil, true, false] do
-    Color.CSSNames.known?(value)
+    Color.CSS.Names.known?(value)
   end
 
   def css_name?(value) when is_binary(value) do
-    Color.CSSNames.known?(value)
+    Color.CSS.Names.known?(value)
   end
 
   def css_name?(_other), do: false

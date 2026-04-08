@@ -31,7 +31,7 @@ defmodule ColorTest do
   doctest Color.ICtCp
   doctest Color.IPT
   doctest Color.CAM16UCS
-  doctest Color.CSSNames
+  doctest Color.CSS.Names
   doctest Color.Contrast
   doctest Color.Spectral
   doctest Color.Mix
@@ -755,16 +755,16 @@ defmodule ColorTest do
       end
     end
 
-    test "Color.CSSNames.nearest returns the expected named colour" do
-      {:ok, {name, _, de}} = Color.CSSNames.nearest("#ff0000")
+    test "Color.CSS.Names.nearest returns the expected named colour" do
+      {:ok, {name, _, de}} = Color.CSS.Names.nearest("#ff0000")
       assert name == "red"
       assert_in_delta de, 0.0, 1.0e-6
     end
 
-    test "Color.CSSNames.lookup accepts atoms and snake case" do
-      assert {:ok, {255, 228, 225}} = Color.CSSNames.lookup(:misty_rose)
-      assert {:ok, {255, 228, 225}} = Color.CSSNames.lookup("Misty Rose")
-      assert {:ok, {255, 228, 225}} = Color.CSSNames.lookup("misty-rose")
+    test "Color.CSS.Names.lookup accepts atoms and snake case" do
+      assert {:ok, {255, 228, 225}} = Color.CSS.Names.lookup(:misty_rose)
+      assert {:ok, {255, 228, 225}} = Color.CSS.Names.lookup("Misty Rose")
+      assert {:ok, {255, 228, 225}} = Color.CSS.Names.lookup("misty-rose")
     end
 
     test "Color.new/1 accepts atom CSS names" do
