@@ -114,6 +114,7 @@ defmodule Color.MixProject do
       ],
       "Conversion Math": ~r/Color.Conversion/,
       ANSI: [Color.ANSI],
+      LED: ~r/Color\.LED/,
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [

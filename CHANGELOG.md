@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
+* `Color.LED` module with support for multi-channel addressable LED pixels that include extra white channels. `Color.LED.RGBW` covers four-channel pixels (R, G, B, W) used by WS2814 and SK6812-RGBW. `Color.LED.RGBWW` covers five-channel RGB+CCT pixels (R, G, B, WW, CW) used by WS2805 and several SK6812 variants. Both provide `from_srgb/2`, `to_srgb/1`, and `to_xyz/1`. `Color.LED.chip_options/1` returns recommended extraction options for common chip variants (`:ws2814_ww`, `:ws2814_nw`, `:ws2814_cw`, `:sk6812_ww`, `:sk6812_nw`, `:sk6812_cw`, `:ws2805`).
+
 * `Color.ANSI` module for parsing and emitting ANSI SGR colour escape sequences. Supports 16-colour, 256-colour indexed, and 24-bit truecolor forms, with perceptual nearest-palette matching (CIEDE2000) when encoding to the 16- or 256-colour palette. Includes `parse/1`, `to_string/2`, `wrap/3`, `nearest_256/1`, `nearest_16/1`, `palette_256/0`, `palette_16/0`, and a typed `Color.ANSI.ParseError` exception.
 
 * Top-level `Color.to_hex/1`, `Color.to_css/1,2`, and `Color.to_ansi/1,2` convenience functions that accept any input `Color.new/1` accepts and raise a typed exception on failure.
