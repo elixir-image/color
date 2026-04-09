@@ -154,12 +154,12 @@ defmodule Color.Sigil do
 
   defp parse_at_compile_time(body, ~c"h") do
     [h, s, l] = parse_floats(body, 3)
-    %Color.Hsl{h: h, s: s, l: l}
+    %Color.HSL{h: h, s: s, l: l}
   end
 
   defp parse_at_compile_time(body, ~c"v") do
     [h, s, v] = parse_floats(body, 3)
-    %Color.Hsv{h: h, s: s, v: v}
+    %Color.HSV{h: h, s: s, v: v}
   end
 
   defp parse_at_compile_time(body, ~c"k") do

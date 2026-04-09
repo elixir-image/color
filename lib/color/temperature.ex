@@ -51,7 +51,7 @@ defmodule Color.Temperature do
   end
 
   def cct(color) do
-    with {:ok, xyy} <- Color.convert(color, Color.XYY) do
+    with {:ok, xyy} <- Color.convert(color, Color.XyY) do
       cct({xyy.x, xyy.y})
     end
   end

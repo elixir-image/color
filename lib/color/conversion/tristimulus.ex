@@ -15,7 +15,7 @@ defmodule Color.Tristimulus do
     Lindbloom primary-scaling step.
 
   * `Color.Lab`, `Color.Luv`, `Color.LCHab`, `Color.LCHuv`,
-    `Color.XYY` — every CIE-tagged colour space converts to XYZ
+    `Color.XyY` — every CIE-tagged colour space converts to XYZ
     relative to its illuminant's reference white.
 
   * `Color.Spectral` — the integration normaliser uses the
@@ -225,10 +225,10 @@ defmodule Color.Tristimulus do
                      cie1931 =
                        case Map.fetch(@lindbloom_overrides_2, atom) do
                          {:ok, xyz} -> xyz
-                         :error -> Color.XYY.to_xyz_list(cie1931)
+                         :error -> Color.XyY.to_xyz_list(cie1931)
                        end
 
-                     cie1964 = Color.XYY.to_xyz_list(cie1964)
+                     cie1964 = Color.XyY.to_xyz_list(cie1964)
 
                      case Enum.reject([cie1931, cie1964], &is_nil/1) do
                        [cie1931] ->

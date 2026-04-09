@@ -1,4 +1,4 @@
-defmodule Color.XYY do
+defmodule Color.XyY do
   @moduledoc """
   CIE xyY color space — chromaticity coordinates `x`, `y` and luminance `Y`.
 
@@ -37,7 +37,7 @@ defmodule Color.XYY do
 
   ### Arguments
 
-  * `xyy` is a `Color.XYY` struct.
+  * `xyy` is a `Color.XyY` struct.
 
   ### Returns
 
@@ -45,7 +45,7 @@ defmodule Color.XYY do
 
   ### Examples
 
-      iex> {:ok, xyz} = Color.XYY.to_xyz(%Color.XYY{x: 0.31271, y: 0.32902, yY: 1.0})
+      iex> {:ok, xyz} = Color.XyY.to_xyz(%Color.XyY{x: 0.31271, y: 0.32902, yY: 1.0})
       iex> {Float.round(xyz.x, 4), Float.round(xyz.y, 4), Float.round(xyz.z, 4)}
       {0.9504, 1.0, 1.0889}
 
@@ -91,12 +91,12 @@ defmodule Color.XYY do
 
   ### Returns
 
-  * A `Color.XYY` struct.
+  * A `Color.XyY` struct.
 
   ### Examples
 
       iex> xyz = %Color.XYZ{x: 0.95047, y: 1.0, z: 1.08883, illuminant: :D65, observer_angle: 2}
-      iex> {:ok, xyy} = Color.XYY.from_xyz(xyz)
+      iex> {:ok, xyy} = Color.XyY.from_xyz(xyz)
       iex> {Float.round(xyy.x, 5), Float.round(xyy.y, 5), Float.round(xyy.yY, 4)}
       {0.31273, 0.32902, 1.0}
 

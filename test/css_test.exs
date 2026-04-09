@@ -146,7 +146,7 @@ defmodule Color.CSSTest do
 
     test "in hsl" do
       assert {:ok, c} = CSS.parse("color-mix(in hsl, red, blue)")
-      assert c.__struct__ == Color.Hsl
+      assert c.__struct__ == Color.HSL
     end
 
     test "with hex colors" do
@@ -202,7 +202,7 @@ defmodule Color.CSSTest do
 
     test "hsl from named color" do
       assert {:ok, c} = CSS.parse("hsl(from rebeccapurple h s l)")
-      assert {:ok, src_hsl} = Color.convert(%Color.SRGB{r: 0.4, g: 0.2, b: 0.6}, Color.Hsl)
+      assert {:ok, src_hsl} = Color.convert(%Color.SRGB{r: 0.4, g: 0.2, b: 0.6}, Color.HSL)
       assert_in_delta c.h, src_hsl.h, 0.001
     end
 

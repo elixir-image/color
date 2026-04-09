@@ -15,12 +15,12 @@ defmodule ColorTest do
   doctest Color.Oklab
   doctest Color.Oklch
   doctest Color.Conversion.Oklab
-  doctest Color.XYY
+  doctest Color.XyY
   doctest Color.SRGB
   doctest Color.AdobeRGB
   doctest Color.RGB
-  doctest Color.Hsl
-  doctest Color.Hsv
+  doctest Color.HSL
+  doctest Color.HSV
   doctest Color.RGB.WorkingSpace
   doctest Color.Distance
   doctest Color.CMYK
@@ -74,8 +74,8 @@ defmodule ColorTest do
         assert %Color.Lab{l: 53.24, a: 80.09} = ~COLOR[53.24, 80.09, 67.20]l
         assert %Color.Oklab{l: 0.63} = ~COLOR[0.63, 0.22, 0.13]o
         assert %Color.XYZ{y: 1.0, illuminant: :D65} = ~COLOR[0.95, 1.0, 1.08]x
-        assert %Color.Hsl{h: 0.5} = ~COLOR[0.5, 1.0, 0.5]h
-        assert %Color.Hsv{v: 1.0} = ~COLOR[0.5, 1.0, 1.0]v
+        assert %Color.HSL{h: 0.5} = ~COLOR[0.5, 1.0, 0.5]h
+        assert %Color.HSV{v: 1.0} = ~COLOR[0.5, 1.0, 1.0]v
         assert %Color.CMYK{k: +0.0} = ~COLOR[0.0, 0.5, 1.0, 0.0]k
       end
     end
@@ -86,7 +86,7 @@ defmodule ColorTest do
 
     @targets [
       Color.XYZ,
-      Color.XYY,
+      Color.XyY,
       Color.Lab,
       Color.LCHab,
       Color.Luv,
@@ -103,8 +103,8 @@ defmodule ColorTest do
       Color.CAM16UCS,
       Color.SRGB,
       Color.AdobeRGB,
-      Color.Hsl,
-      Color.Hsv
+      Color.HSL,
+      Color.HSV
     ]
 
     test "round-trip sRGB -> target -> sRGB is identity for every target" do
@@ -486,7 +486,7 @@ defmodule ColorTest do
 
     @targets [
       Color.XYZ,
-      Color.XYY,
+      Color.XyY,
       Color.Lab,
       Color.LCHab,
       Color.Luv,
@@ -503,8 +503,8 @@ defmodule ColorTest do
       Color.CAM16UCS,
       Color.SRGB,
       Color.AdobeRGB,
-      Color.Hsl,
-      Color.Hsv
+      Color.HSL,
+      Color.HSV
     ]
 
     test "every target preserves alpha through convert/2" do

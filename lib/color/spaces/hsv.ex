@@ -1,4 +1,4 @@
-defmodule Color.Hsv do
+defmodule Color.HSV do
   @moduledoc """
   HSV color space — hue, saturation, value.
 
@@ -29,7 +29,7 @@ defmodule Color.Hsv do
 
   ### Arguments
 
-  * `hsv` is a `Color.Hsv` struct.
+  * `hsv` is a `Color.HSV` struct.
 
   ### Returns
 
@@ -37,7 +37,7 @@ defmodule Color.Hsv do
 
   ### Examples
 
-      iex> {:ok, srgb} = Color.Hsv.to_srgb(%Color.Hsv{h: 0.0, s: 1.0, v: 1.0})
+      iex> {:ok, srgb} = Color.HSV.to_srgb(%Color.HSV{h: 0.0, s: 1.0, v: 1.0})
       iex> {srgb.r, srgb.g, srgb.b}
       {1.0, 0.0, 0.0}
 
@@ -77,11 +77,11 @@ defmodule Color.Hsv do
 
   ### Returns
 
-  * A `Color.Hsv` struct.
+  * A `Color.HSV` struct.
 
   ### Examples
 
-      iex> {:ok, hsv} = Color.Hsv.from_srgb(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0})
+      iex> {:ok, hsv} = Color.HSV.from_srgb(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0})
       iex> {hsv.h, hsv.s, hsv.v}
       {0.0, 1.0, 1.0}
 

@@ -6,7 +6,7 @@ defmodule Color.Harmony do
   All helpers operate in **Oklch** by default, which gives visually
   consistent rotations across the hue wheel. Pass `:in` to select a
   different cylindrical space (`Color.LCHab`, `Color.LCHuv`,
-  `Color.Hsl`, `Color.Hsv`).
+  `Color.HSL`, `Color.HSV`).
 
   Every function accepts any color accepted by `Color.new/1` and
   returns a list of `Color.SRGB` structs, ordered starting with the
@@ -174,8 +174,8 @@ defmodule Color.Harmony do
   defp do_rotate(Color.LCHuv, c, deg), do: %{c | h: wrap(c.h + deg)}
   defp do_rotate(Color.HSLuv, c, deg), do: %{c | h: wrap(c.h + deg)}
   defp do_rotate(Color.HPLuv, c, deg), do: %{c | h: wrap(c.h + deg)}
-  defp do_rotate(Color.Hsl, c, deg), do: %{c | h: wrap(c.h * 360 + deg) / 360}
-  defp do_rotate(Color.Hsv, c, deg), do: %{c | h: wrap(c.h * 360 + deg) / 360}
+  defp do_rotate(Color.HSL, c, deg), do: %{c | h: wrap(c.h * 360 + deg) / 360}
+  defp do_rotate(Color.HSV, c, deg), do: %{c | h: wrap(c.h * 360 + deg) / 360}
 
   defp do_rotate(other, _, _) do
     raise %Color.UnknownColorSpaceError{space: other}

@@ -18,7 +18,7 @@ defmodule Color.Mix do
 
   Hue interpolation is handled specially for cylindrical spaces
   (`Color.LCHab`, `Color.LCHuv`, `Color.Oklch`, `Color.HSLuv`,
-  `Color.HPLuv`, `Color.Hsl`, `Color.Hsv`): by default we take the
+  `Color.HPLuv`, `Color.HSL`, `Color.HSV`): by default we take the
   **shorter arc** around the hue circle. Pass `hue: :longer`,
   `hue: :increasing` or `hue: :decreasing` to force a different path,
   matching the CSS Color 4 hue-interpolation modes.
@@ -31,8 +31,8 @@ defmodule Color.Mix do
     Color.Oklch,
     Color.HSLuv,
     Color.HPLuv,
-    Color.Hsl,
-    Color.Hsv
+    Color.HSL,
+    Color.HSV
   ]
 
   @doc """
@@ -269,11 +269,11 @@ defmodule Color.Mix do
     }
   end
 
-  defp cylindrical_interpolate(Color.Hsl, a, b, t, hue_mode) do
+  defp cylindrical_interpolate(Color.HSL, a, b, t, hue_mode) do
     # Hsl hue is 0..1
     h = hue_lerp(a.h * 360, b.h * 360, t, hue_mode) / 360
 
-    %Color.Hsl{
+    %Color.HSL{
       h: h,
       s: lerp(a.s, b.s, t),
       l: lerp(a.l, b.l, t),
@@ -281,10 +281,10 @@ defmodule Color.Mix do
     }
   end
 
-  defp cylindrical_interpolate(Color.Hsv, a, b, t, hue_mode) do
+  defp cylindrical_interpolate(Color.HSV, a, b, t, hue_mode) do
     h = hue_lerp(a.h * 360, b.h * 360, t, hue_mode) / 360
 
-    %Color.Hsv{
+    %Color.HSV{
       h: h,
       s: lerp(a.s, b.s, t),
       v: lerp(a.v, b.v, t),

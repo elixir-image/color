@@ -13,7 +13,7 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 
 ## Features
 
-* **20+ color space structs** including `Color.SRGB`, `Color.AdobeRGB`, `Color.RGB` (linear, in any of 24 named working spaces), `Color.Lab`, `Color.LCHab`, `Color.Luv`, `Color.LCHuv`, `Color.XYZ`, `Color.XYY`, `Color.Oklab`, `Color.Oklch`, `Color.HSLuv`, `Color.HPLuv`, `Color.Hsl`, `Color.Hsv`, `Color.CMYK`, `Color.YCbCr`, `Color.JzAzBz`, `Color.ICtCp`, `Color.IPT`, `Color.CAM16UCS`.
+* **20+ color space structs** including `Color.SRGB`, `Color.AdobeRGB`, `Color.RGB` (linear, in any of 24 named working spaces), `Color.Lab`, `Color.LCHab`, `Color.Luv`, `Color.LCHuv`, `Color.XYZ`, `Color.XyY`, `Color.Oklab`, `Color.Oklch`, `Color.HSLuv`, `Color.HPLuv`, `Color.HSL`, `Color.HSV`, `Color.CMYK`, `Color.YCbCr`, `Color.JzAzBz`, `Color.ICtCp`, `Color.IPT`, `Color.CAM16UCS`.
 
 * **Top-level conversion API**. `Color.new/2` and `Color.convert/2,3,4` accept structs, hex strings, CSS named colors, atoms, or bare lists of numbers (with strict per-space validation) and convert between any pair of supported spaces. `Color.convert_many/2,3,4` is the batch equivalent. Alpha is preserved across every path.
 

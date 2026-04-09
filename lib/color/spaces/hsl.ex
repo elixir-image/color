@@ -1,4 +1,4 @@
-defmodule Color.Hsl do
+defmodule Color.HSL do
   @moduledoc """
   HSL color space — hue, saturation, lightness.
 
@@ -29,7 +29,7 @@ defmodule Color.Hsl do
 
   ### Arguments
 
-  * `hsl` is a `Color.Hsl` struct.
+  * `hsl` is a `Color.HSL` struct.
 
   ### Returns
 
@@ -37,7 +37,7 @@ defmodule Color.Hsl do
 
   ### Examples
 
-      iex> {:ok, srgb} = Color.Hsl.to_srgb(%Color.Hsl{h: 0.0, s: 1.0, l: 0.5})
+      iex> {:ok, srgb} = Color.HSL.to_srgb(%Color.HSL{h: 0.0, s: 1.0, l: 0.5})
       iex> {srgb.r, srgb.g, srgb.b}
       {1.0, 0.0, 0.0}
 
@@ -66,11 +66,11 @@ defmodule Color.Hsl do
 
   ### Returns
 
-  * A `Color.Hsl` struct.
+  * A `Color.HSL` struct.
 
   ### Examples
 
-      iex> {:ok, hsl} = Color.Hsl.from_srgb(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0})
+      iex> {:ok, hsl} = Color.HSL.from_srgb(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0})
       iex> {hsl.h, hsl.s, hsl.l}
       {0.0, 1.0, 0.5}
 
@@ -98,7 +98,7 @@ defmodule Color.Hsl do
 
   ### Arguments
 
-  * `hsl` is a `Color.Hsl` struct.
+  * `hsl` is a `Color.HSL` struct.
 
   ### Returns
 
@@ -118,7 +118,7 @@ defmodule Color.Hsl do
 
   ### Returns
 
-  * A `Color.Hsl` struct.
+  * A `Color.HSL` struct.
 
   """
   def from_xyz(%Color.XYZ{} = xyz) do

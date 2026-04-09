@@ -20,7 +20,7 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
-* Twenty-one color-space struct modules covering CIE, modern perceptual, HDR, video, device, and web spaces: `Color.SRGB`, `Color.AdobeRGB`, `Color.RGB` (linear, in any of 24 named working spaces), `Color.Lab`, `Color.LCHab`, `Color.Luv`, `Color.LCHuv`, `Color.XYZ`, `Color.XYY`, `Color.Oklab`, `Color.Oklch`, `Color.HSLuv`, `Color.HPLuv`, `Color.Hsl`, `Color.Hsv`, `Color.CMYK`, `Color.YCbCr`, `Color.JzAzBz`, `Color.ICtCp`, `Color.IPT`, `Color.CAM16UCS`.
+* Twenty-one color-space struct modules covering CIE, modern perceptual, HDR, video, device, and web spaces: `Color.SRGB`, `Color.AdobeRGB`, `Color.RGB` (linear, in any of 24 named working spaces), `Color.Lab`, `Color.LCHab`, `Color.Luv`, `Color.LCHuv`, `Color.XYZ`, `Color.XyY`, `Color.Oklab`, `Color.Oklch`, `Color.HSLuv`, `Color.HPLuv`, `Color.HSL`, `Color.HSV`, `Color.CMYK`, `Color.YCbCr`, `Color.JzAzBz`, `Color.ICtCp`, `Color.IPT`, `Color.CAM16UCS`.
 
 * Top-level `Color.new/1,2`, `Color.convert/2,3,4`, `Color.convert_many/2,3,4`, `Color.luminance/1`, `Color.sort/2`, `Color.premultiply/1`, `Color.unpremultiply/1`.
 

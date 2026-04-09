@@ -11,7 +11,7 @@ defmodule Color do
 
   * `Color.XYZ` — CIE 1931 tristimulus.
 
-  * `Color.XYY` — CIE xyY (chromaticity + luminance).
+  * `Color.XyY` — CIE xyY (chromaticity + luminance).
 
   * `Color.Lab` — CIE 1976 `L*a*b*`.
 
@@ -47,7 +47,7 @@ defmodule Color do
 
   * `Color.RGB` — linear RGB in any named working space.
 
-  * `Color.Hsl`, `Color.Hsv` — non-linear reparameterisations of sRGB.
+  * `Color.HSL`, `Color.HSV` — non-linear reparameterisations of sRGB.
 
   All struct modules also expose their own `to_xyz/1` and `from_xyz/1`
   functions directly if you want to skip dispatch.
@@ -79,8 +79,8 @@ defmodule Color do
   | `:srgb` | `Color.SRGB` | default |
   | `:adobe_rgb` / `:adobe` | `Color.AdobeRGB` | |
   | `:cmyk` | `Color.CMYK` | 4 or 5 channels |
-  | `:hsl` | `Color.Hsl` | hue in `[0, 1]` |
-  | `:hsv` | `Color.Hsv` | hue in `[0, 1]` |
+  | `:hsl` | `Color.HSL` | hue in `[0, 1]` |
+  | `:hsv` | `Color.HSV` | hue in `[0, 1]` |
   | `:hsluv` | `Color.HSLuv` | hue in degrees, s/l in `[0, 100]` |
   | `:hpluv` | `Color.HPLuv` | hue in degrees, s/l in `[0, 100]` |
   | `:lab` | `Color.Lab` | D65 |
@@ -90,7 +90,7 @@ defmodule Color do
   | `:oklab` | `Color.Oklab` | D65 |
   | `:oklch` | `Color.Oklch` | D65 |
   | `:xyz` | `Color.XYZ` | D65 / 2° |
-  | `:xyy` / `:xyY` | `Color.XYY` | D65 / 2° |
+  | `:xyy` / `:xyY` | `Color.XyY` | D65 / 2° |
   | `:jzazbz` | `Color.JzAzBz` | |
   | `:ictcp` | `Color.ICtCp` | defaults to `transfer: :pq` |
   | `:ipt` | `Color.IPT` | |
@@ -201,8 +201,8 @@ defmodule Color do
           | Color.LCHuv.t()
           | Color.Oklab.t()
           | Color.Oklch.t()
-          | Color.Hsl.t()
-          | Color.Hsv.t()
+          | Color.HSL.t()
+          | Color.HSV.t()
           | Color.HSLuv.t()
           | Color.HPLuv.t()
           | Color.CMYK.t()
@@ -212,7 +212,7 @@ defmodule Color do
           | Color.IPT.t()
           | Color.CAM16UCS.t()
           | Color.XYZ.t()
-          | Color.XYY.t()
+          | Color.XyY.t()
 
   @typedoc """
   Anything `Color.new/1,2` accepts: a colour struct, a list of 3, 4
@@ -240,8 +240,8 @@ defmodule Color do
           | Color.LCHuv
           | Color.Oklab
           | Color.Oklch
-          | Color.Hsl
-          | Color.Hsv
+          | Color.HSL
+          | Color.HSV
           | Color.HSLuv
           | Color.HPLuv
           | Color.CMYK
@@ -251,7 +251,7 @@ defmodule Color do
           | Color.IPT
           | Color.CAM16UCS
           | Color.XYZ
-          | Color.XYY
+          | Color.XyY
 
   @typedoc """
   A `{:ok, color}` or `{:error, exception_struct}` result. The error
@@ -262,7 +262,7 @@ defmodule Color do
 
   @xyz_hub [
     Color.XYZ,
-    Color.XYY,
+    Color.XyY,
     Color.Lab,
     Color.LCHab,
     Color.Luv,
@@ -271,8 +271,8 @@ defmodule Color do
     Color.Oklch,
     Color.SRGB,
     Color.AdobeRGB,
-    Color.Hsl,
-    Color.Hsv,
+    Color.HSL,
+    Color.HSV,
     Color.HSLuv,
     Color.HPLuv,
     Color.CMYK,
@@ -291,8 +291,8 @@ defmodule Color do
     Color.AdobeRGB => {:D65, 2},
     Color.Oklab => {:D65, 2},
     Color.Oklch => {:D65, 2},
-    Color.Hsl => {:D65, 2},
-    Color.Hsv => {:D65, 2},
+    Color.HSL => {:D65, 2},
+    Color.HSV => {:D65, 2},
     Color.HSLuv => {:D65, 2},
     Color.HPLuv => {:D65, 2},
     Color.CMYK => {:D65, 2},
@@ -422,9 +422,9 @@ defmodule Color do
     :cmyk => :cmyk,
     Color.CMYK => :cmyk,
     :hsl => :hsl,
-    Color.Hsl => :hsl,
+    Color.HSL => :hsl,
     :hsv => :hsv,
-    Color.Hsv => :hsv,
+    Color.HSV => :hsv,
     :hsluv => :hsluv,
     Color.HSLuv => :hsluv,
     :hpluv => :hpluv,
@@ -446,7 +446,7 @@ defmodule Color do
     Color.XYZ => :xyz,
     :xyy => :xyy,
     :xyY => :xyy,
-    Color.XYY => :xyy,
+    Color.XyY => :xyy,
     :jzazbz => :jzazbz,
     Color.JzAzBz => :jzazbz,
     :ictcp => :ictcp,
@@ -530,8 +530,8 @@ defmodule Color do
     do: {:error, %Color.InvalidComponentError{space: "CMYK", value: list, reason: :wrong_count}}
 
   # Strict unit-range cylindrical (HSL, HSV — hue in [0, 1])
-  defp build(:hsl, list), do: strict_unit_cyl(list, Color.Hsl, "HSL", [:h, :s, :l])
-  defp build(:hsv, list), do: strict_unit_cyl(list, Color.Hsv, "HSV", [:h, :s, :v])
+  defp build(:hsl, list), do: strict_unit_cyl(list, Color.HSL, "HSL", [:h, :s, :l])
+  defp build(:hsv, list), do: strict_unit_cyl(list, Color.HSV, "HSV", [:h, :s, :v])
 
   # Strict HSLuv / HPLuv (h in [0, 360), s/l in [0, 100])
   defp build(:hsluv, list), do: strict_deg_percent(list, Color.HSLuv, "HSLuv")
@@ -588,7 +588,7 @@ defmodule Color do
     with {:ok, [a1, a2, a3 | rest]} <- permissive_list(list, "xyY") do
       alpha = List.first(rest)
       fields = [x: a1, y: a2, yY: a3, alpha: alpha, illuminant: :D65, observer_angle: 2]
-      {:ok, struct!(Color.XYY, fields)}
+      {:ok, struct!(Color.XyY, fields)}
     end
   end
 
@@ -1063,7 +1063,7 @@ defmodule Color do
   """
   @spec to_xyz(t()) :: {:ok, Color.XYZ.t()} | {:error, Exception.t()}
   def to_xyz(%Color.XYZ{} = xyz), do: {:ok, xyz}
-  def to_xyz(%Color.XYY{} = c), do: Color.XYY.to_xyz(c)
+  def to_xyz(%Color.XyY{} = c), do: Color.XyY.to_xyz(c)
   def to_xyz(%Color.Lab{} = c), do: Color.Lab.to_xyz(c)
   def to_xyz(%Color.LCHab{} = c), do: Color.LCHab.to_xyz(c)
   def to_xyz(%Color.Luv{} = c), do: Color.Luv.to_xyz(c)
@@ -1081,8 +1081,8 @@ defmodule Color do
   def to_xyz(%Color.SRGB{} = c), do: Color.SRGB.to_xyz(c)
   def to_xyz(%Color.AdobeRGB{} = c), do: Color.AdobeRGB.to_xyz(c)
   def to_xyz(%Color.RGB{} = c), do: Color.RGB.to_xyz(c)
-  def to_xyz(%Color.Hsl{} = c), do: Color.Hsl.to_xyz(c)
-  def to_xyz(%Color.Hsv{} = c), do: Color.Hsv.to_xyz(c)
+  def to_xyz(%Color.HSL{} = c), do: Color.HSL.to_xyz(c)
+  def to_xyz(%Color.HSV{} = c), do: Color.HSV.to_xyz(c)
 
   @doc """
   Converts a list (or stream) of colors to the same target space.
@@ -1593,7 +1593,7 @@ defmodule Color do
 
   * `Color.SRGB` → `rgb(r g b / a)`
 
-  * `Color.Hsl` → `hsl(h s% l% / a)`
+  * `Color.HSL` → `hsl(h s% l% / a)`
 
   * `Color.Lab` → `lab(L% a b / a)`
 
@@ -1870,7 +1870,7 @@ defmodule Color do
     fn c ->
       reps = 8
 
-      {:ok, hsv} = convert(c, Color.Hsv)
+      {:ok, hsv} = convert(c, Color.HSV)
       lum = :math.sqrt(0.241 * c.r + 0.691 * c.g + 0.068 * c.b)
       h2 = trunc(hsv.h * reps)
       lum2 = trunc(lum * reps)

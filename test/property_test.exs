@@ -40,7 +40,7 @@ defmodule Color.PropertyTest do
   describe "round-trip identity" do
     @round_trip_targets [
       {Color.XYZ, 1.0e-12},
-      {Color.XYY, 1.0e-12},
+      {Color.XyY, 1.0e-12},
       {Color.Lab, 1.0e-10},
       {Color.LCHab, 1.0e-10},
       {Color.Luv, 1.0e-10},
@@ -54,8 +54,8 @@ defmodule Color.PropertyTest do
       {Color.ICtCp, 1.0e-4},
       {Color.YCbCr, 1.0e-12},
       {Color.CAM16UCS, 1.0e-3},
-      {Color.Hsl, 1.0e-12},
-      {Color.Hsv, 1.0e-12},
+      {Color.HSL, 1.0e-12},
+      {Color.HSV, 1.0e-12},
       {Color.CMYK, 1.0e-12},
       {Color.SRGB, 1.0e-12},
       {Color.AdobeRGB, 1.0e-10}
@@ -82,7 +82,7 @@ defmodule Color.PropertyTest do
   describe "alpha preservation" do
     @alpha_targets [
       Color.XYZ,
-      Color.XYY,
+      Color.XyY,
       Color.Lab,
       Color.LCHab,
       Color.Luv,
@@ -96,8 +96,8 @@ defmodule Color.PropertyTest do
       Color.ICtCp,
       Color.YCbCr,
       Color.CAM16UCS,
-      Color.Hsl,
-      Color.Hsv,
+      Color.HSL,
+      Color.HSV,
       Color.CMYK,
       Color.AdobeRGB
     ]

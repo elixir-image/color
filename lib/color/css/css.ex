@@ -90,7 +90,7 @@ defmodule Color.CSS do
     "oklab" => Color.Oklab,
     "lch" => Color.LCHab,
     "oklch" => Color.Oklch,
-    "hsl" => Color.Hsl,
+    "hsl" => Color.HSL,
     "hwb" => Color.SRGB,
     "xyz" => Color.XYZ,
     "xyz-d50" => Color.XYZ,
@@ -239,7 +239,7 @@ defmodule Color.CSS do
     end
   end
 
-  def to_css(%Color.Hsl{} = c, _options) do
+  def to_css(%Color.HSL{} = c, _options) do
     "hsl(#{trim(c.h * 360)} #{trim(c.s * 100)}% #{trim(c.l * 100)}%#{alpha_part(c.alpha)})"
   end
 
@@ -399,7 +399,7 @@ defmodule Color.CSS do
   end
 
   defp hsl_bindings(color) do
-    with {:ok, %Color.Hsl{h: h, s: s, l: l, alpha: a}} <- Color.convert(color, Color.Hsl) do
+    with {:ok, %Color.HSL{h: h, s: s, l: l, alpha: a}} <- Color.convert(color, Color.HSL) do
       {:ok, %{"h" => h * 360, "s" => s * 100, "l" => l * 100, "alpha" => a || 1.0}}
     end
   end
@@ -407,7 +407,7 @@ defmodule Color.CSS do
   defp hwb_bindings(color) do
     # CSS HWB derives whiteness/blackness from HSV: w = (1 - s) * v,
     # b = 1 - v. We use HSV directly since the library exposes it.
-    with {:ok, %Color.Hsv{h: h, s: s, v: v, alpha: a}} <- Color.convert(color, Color.Hsv) do
+    with {:ok, %Color.HSV{h: h, s: s, v: v, alpha: a}} <- Color.convert(color, Color.HSV) do
       w = (1 - s) * v
       bk = 1 - v
       {:ok, %{"h" => h * 360, "w" => w * 100, "b" => bk * 100, "alpha" => a || 1.0}}
@@ -493,7 +493,7 @@ defmodule Color.CSS do
          {:ok, sf} <- resolve_percent(s, bindings, "HSL saturation"),
          {:ok, lf} <- resolve_percent(l, bindings, "HSL lightness"),
          {:ok, a} <- resolve_alpha(alpha, bindings) do
-      {:ok, %Color.Hsl{h: hf / 360, s: sf / 100, l: lf / 100, alpha: a}}
+      {:ok, %Color.HSL{h: hf / 360, s: sf / 100, l: lf / 100, alpha: a}}
     end
   end
 
@@ -516,7 +516,7 @@ defmodule Color.CSS do
         grey = wf / (wf + bf)
         {:ok, %Color.SRGB{r: grey, g: grey, b: grey, alpha: a}}
       else
-        {:ok, hsl} = Color.Hsl.to_srgb(%Color.Hsl{h: hf / 360, s: 1.0, l: 0.5})
+        {:ok, hsl} = Color.HSL.to_srgb(%Color.HSL{h: hf / 360, s: 1.0, l: 0.5})
         r = hsl.r * (1 - wf - bf) + wf
         g = hsl.g * (1 - wf - bf) + wf
         b = hsl.b * (1 - wf - bf) + wf
@@ -833,8 +833,8 @@ defmodule Color.CSS do
       observer_angle: a.observer_angle
     }
 
-  defp lerp_struct(Color.Hsl, a, b, t, hue_mode),
-    do: %Color.Hsl{
+  defp lerp_struct(Color.HSL, a, b, t, hue_mode),
+    do: %Color.HSL{
       h: hue_lerp(a.h * 360, b.h * 360, t, hue_mode) / 360,
       s: lerp(a.s, b.s, t),
       l: lerp(a.l, b.l, t),
