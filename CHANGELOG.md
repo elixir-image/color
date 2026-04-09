@@ -16,6 +16,8 @@ All notable changes to this project are documented here. The format is based on 
 
 * Changed the module `Color.CSSNames` to `Color.CSS.Names`
 
+* Changed all colorspace module names to be the closest possible match to their standard names.
+
 ## Color version 0.3.0
 
 ### Added
