@@ -319,6 +319,69 @@ defmodule Color.Palette.ContrastScale do
     Map.put(token, "$extensions", ext)
   end
 
+  @doc """
+  Emits the palette as a block of **CSS custom properties**. See
+  `Color.Palette.Tonal.to_css/2` for option details.
+
+  ### Examples
+
+      iex> palette = Color.Palette.ContrastScale.new("#3b82f6", name: "blue")
+      iex> css = Color.Palette.ContrastScale.to_css(palette)
+      iex> String.contains?(css, "--blue-500:")
+      true
+
+  """
+  @spec to_css(t(), keyword()) :: binary()
+  def to_css(%__MODULE__{} = palette, options \\ []) do
+    name = Keyword.get(options, :name, palette.name || "color")
+    selector = Keyword.get(options, :selector, ":root")
+    labels = labels(palette)
+
+    body =
+      Enum.map_join(labels, "", fn label ->
+        color = Map.fetch!(palette.stops, label)
+        "  --#{name}-#{label}: #{Color.to_hex(color)};\n"
+      end)
+
+    "#{selector} {\n#{body}}\n"
+  end
+
+  @doc """
+  Emits the palette as a **Tailwind CSS `theme.extend.colors`
+  config block**. See `Color.Palette.Tonal.to_tailwind/2` for
+  option details.
+
+  ### Examples
+
+      iex> palette = Color.Palette.ContrastScale.new("#3b82f6", name: "blue")
+      iex> tw = Color.Palette.ContrastScale.to_tailwind(palette)
+      iex> String.contains?(tw, "blue:")
+      true
+
+  """
+  @spec to_tailwind(t(), keyword()) :: binary()
+  def to_tailwind(%__MODULE__{} = palette, options \\ []) do
+    name = Keyword.get(options, :name, palette.name || "color")
+    labels = labels(palette)
+
+    body =
+      Enum.map_join(labels, "", fn label ->
+        color = Map.fetch!(palette.stops, label)
+        "      #{label}: \"#{Color.to_hex(color)}\",\n"
+      end)
+
+    """
+    theme: {
+      extend: {
+        colors: {
+          #{name}: {
+    #{body}      }
+        }
+      }
+    }
+    """
+  end
+
   # ---- algorithm ----------------------------------------------------------
 
   # Bezold-Brücke: H(p) = H_base + 5 · (1 − p). Small drift toward

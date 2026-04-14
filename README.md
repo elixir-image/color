@@ -125,7 +125,7 @@ Color.Contrast.apca("black", "white")           # 106.04
 
 ### Palettes
 
-See the [palette guide](https://hexdocs.pm/color/palettes.html) for background, research, and when to use each algorithm, and the [visualizer guide](https://hexdocs.pm/color/visualizer.html) for the optional Plug-based web preview (`Color.Palette.Visualizer`).
+See the [palette guide](https://hexdocs.pm/color/palettes.html) for background, research, and when to use each algorithm, the [visualizer guide](https://hexdocs.pm/color/visualizer.html) for the optional Plug-based web preview (`Color.Palette.Visualizer`), and the [integrations guide](https://hexdocs.pm/color/integrations.html) for building design-system tooling on top of `Color.Palette.Tonal.to_css/2` / `to_tailwind/2` / `to_tokens/2` and `Color.Gamut.SVG.render/1`.
 
 Generate design-system palettes from a single seed colour:
 

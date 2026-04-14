@@ -112,51 +112,11 @@ defmodule Color.Palette.Visualizer.ContrastScaleView do
   end
 
   defp css_export(%ContrastScale{} = palette) do
-    name = palette.name || "color"
-    labels = ContrastScale.labels(palette)
-
-    body =
-      Enum.map(labels, fn label ->
-        color = Map.fetch!(palette.stops, label)
-
-        [
-          "  --",
-          Render.escape(name),
-          "-",
-          Integer.to_string(label),
-          ": ",
-          Render.escape(Color.to_hex(color)),
-          ";\n"
-        ]
-      end)
-
-    [":root {\n", body, "}\n"]
+    palette |> ContrastScale.to_css() |> Render.escape()
   end
 
   defp tailwind_export(%ContrastScale{} = palette) do
-    name = palette.name || "color"
-    labels = ContrastScale.labels(palette)
-
-    body =
-      Enum.map(labels, fn label ->
-        color = Map.fetch!(palette.stops, label)
-
-        [
-          "    ",
-          Integer.to_string(label),
-          ": \"",
-          Render.escape(Color.to_hex(color)),
-          "\",\n"
-        ]
-      end)
-
-    [
-      "theme: {\n  extend: {\n    colors: {\n      ",
-      Render.escape(name),
-      ": {\n",
-      body,
-      "      }\n    }\n  }\n}\n"
-    ]
+    palette |> ContrastScale.to_tailwind() |> Render.escape()
   end
 
   defp design_tokens_export(%ContrastScale{} = palette) do

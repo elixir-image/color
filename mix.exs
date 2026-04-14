@@ -75,6 +75,7 @@ defmodule Color.MixProject do
         "README.md",
         "guides/palettes.md",
         "guides/visualizer.md",
+        "guides/integrations.md",
         "LICENSE.md",
         "CHANGELOG.md"
       ],
@@ -131,7 +132,7 @@ defmodule Color.MixProject do
       ],
       Visualizer: ~r/Color\.Palette\.Visualizer/,
       "Design Tokens": [Color.DesignTokens],
-      "Gamut Diagrams": [Color.Gamut.Diagram],
+      "Gamut Diagrams": [Color.Gamut.Diagram, Color.Gamut.SVG],
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [

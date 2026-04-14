@@ -271,7 +271,7 @@ defmodule Color.Palette.VisualizerTest do
     test "emits an inline SVG" do
       conn = conn(:get, "/gamut") |> Color.Palette.Visualizer.call(@opts)
 
-      assert conn.resp_body =~ ~s(<svg viewBox=)
+      assert conn.resp_body =~ ~r/<svg[^>]*viewBox=/
       assert conn.resp_body =~ ~s(class="vz-gamut")
     end
   end

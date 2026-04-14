@@ -6,9 +6,11 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
+* Public APIs for designer-tool integrations. `Color.Palette.Tonal.to_css/2` and `Color.Palette.ContrastScale.to_css/2` emit CSS custom-property blocks (selector and name prefix configurable). `Color.Palette.Tonal.to_tailwind/2` and `Color.Palette.ContrastScale.to_tailwind/2` emit `theme.extend.colors` fragments ready for `tailwind.config.js`. `Color.Gamut.SVG.render/1` renders a complete chromaticity-diagram SVG — projection, gamut overlays, Planckian locus, seed / palette overlays, sizing, and colour overrides all under a single keyword-list API. 
+
 * `Color.Gamut.Diagram` — pure-data module for chromaticity diagrams.
 
-* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram. Supports both CIE 1976 u′v′ (default) and CIE 1931 xy projections, toggleable overlays for sRGB / Display P3 / Rec. 2020 / Adobe RGB / ProPhoto RGB, an optional Planckian locus with annotated CCT points, an optional seed-chromaticity dot, and an optional tonal-palette overlay that plots every stop of the seed's tonal scale as a chain of coloured dots with hoverable labels so users can see that their whole palette sits inside a target gamut. A raw SVG export block at the bottom makes it easy to paste the diagram into a design doc.
+* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram. 
 
 * `Color.Palette.ContrastScale` — a fourth palette algorithm, inspired by Matt Ström-Awn's [Generating colour palettes with math](https://mattstromawn.com/writing/generating-color-palettes/).
 

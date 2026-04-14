@@ -440,6 +440,53 @@ defmodule Color.PaletteTest do
     end
   end
 
+  describe "Tonal.to_css/2 and to_tailwind/2" do
+    test "to_css emits a :root block with one custom property per stop" do
+      palette = Tonal.new("#3b82f6", name: "blue")
+      css = Tonal.to_css(palette)
+
+      assert String.starts_with?(css, ":root {\n")
+      assert String.ends_with?(css, "}\n")
+      assert css =~ "--blue-50:"
+      assert css =~ "--blue-500:"
+      assert css =~ "--blue-950:"
+    end
+
+    test "to_css respects :name and :selector overrides" do
+      palette = Tonal.new("#3b82f6")
+      css = Tonal.to_css(palette, name: "brand", selector: "[data-theme='light']")
+
+      assert String.starts_with?(css, "[data-theme='light'] {\n")
+      assert css =~ "--brand-500:"
+    end
+
+    test "to_tailwind emits a theme.extend.colors block" do
+      palette = Tonal.new("#3b82f6", name: "blue")
+      tw = Tonal.to_tailwind(palette)
+
+      assert tw =~ "theme: {"
+      assert tw =~ "extend: {"
+      assert tw =~ "blue: {"
+      assert tw =~ "50: \"#"
+      assert tw =~ "950: \"#"
+    end
+  end
+
+  describe "ContrastScale.to_css/2 and to_tailwind/2" do
+    test "to_css output is a :root block" do
+      palette = ContrastScale.new("#3b82f6", name: "guaranteed")
+      css = ContrastScale.to_css(palette)
+      assert css =~ "--guaranteed-500:"
+      assert String.starts_with?(css, ":root {\n")
+    end
+
+    test "to_tailwind output is a theme block" do
+      palette = ContrastScale.new("#3b82f6", name: "guaranteed")
+      tw = ContrastScale.to_tailwind(palette)
+      assert tw =~ "guaranteed: {"
+    end
+  end
+
   describe "Tonal.to_tokens/2 (DTCG)" do
     test "emits a named group keyed by stop label" do
       palette = Tonal.new("#3b82f6", name: "blue")

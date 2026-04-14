@@ -249,6 +249,107 @@ defmodule Color.Palette.Tonal do
     %{name => stop_tokens}
   end
 
+  @doc """
+  Emits the palette as a block of **CSS custom properties**,
+  one per stop, keyed by the palette name.
+
+  Output is a plain binary, ready to write to a stylesheet.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Tonal` struct.
+
+  ### Options
+
+  * `:name` overrides the property prefix. Defaults to the
+    palette's `:name` field, or `"color"` if unset.
+
+  * `:selector` is the CSS selector the properties are declared
+    on. Default `":root"`.
+
+  ### Returns
+
+  * A binary containing a single CSS rule.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Tonal.new("#3b82f6", name: "blue")
+      iex> css = Color.Palette.Tonal.to_css(palette)
+      iex> String.contains?(css, "--blue-500:")
+      true
+
+      iex> palette = Color.Palette.Tonal.new("#3b82f6")
+      iex> Color.Palette.Tonal.to_css(palette, name: "brand", selector: "[data-theme]")
+      ...> |> String.starts_with?("[data-theme] {")
+      true
+
+  """
+  @spec to_css(t(), keyword()) :: binary()
+  def to_css(%__MODULE__{} = palette, options \\ []) do
+    name = Keyword.get(options, :name, palette.name || "color")
+    selector = Keyword.get(options, :selector, ":root")
+    labels = labels(palette)
+
+    body =
+      Enum.map_join(labels, "", fn label ->
+        color = Map.fetch!(palette.stops, label)
+        "  --#{name}-#{label}: #{Color.to_hex(color)};\n"
+      end)
+
+    "#{selector} {\n#{body}}\n"
+  end
+
+  @doc """
+  Emits the palette as a **Tailwind CSS `theme.extend.colors`
+  config block** — the exact shape Tailwind's `tailwind.config.js`
+  expects inside the nested object syntax.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Tonal` struct.
+
+  ### Options
+
+  * `:name` overrides the key name. Defaults to the palette's
+    `:name` field, or `"color"` if unset.
+
+  ### Returns
+
+  * A binary containing a JavaScript object literal fragment.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Tonal.new("#3b82f6", name: "blue")
+      iex> config = Color.Palette.Tonal.to_tailwind(palette)
+      iex> String.contains?(config, "blue:")
+      true
+      iex> String.contains?(config, "500:")
+      true
+
+  """
+  @spec to_tailwind(t(), keyword()) :: binary()
+  def to_tailwind(%__MODULE__{} = palette, options \\ []) do
+    name = Keyword.get(options, :name, palette.name || "color")
+    labels = labels(palette)
+
+    body =
+      Enum.map_join(labels, "", fn label ->
+        color = Map.fetch!(palette.stops, label)
+        "      #{label}: \"#{Color.to_hex(color)}\",\n"
+      end)
+
+    """
+    theme: {
+      extend: {
+        colors: {
+          #{name}: {
+    #{body}      }
+        }
+      }
+    }
+    """
+  end
+
   # ---- algorithm helpers --------------------------------------------------
 
   # Position of stop `index` in `[0, 1]` along the light-to-dark

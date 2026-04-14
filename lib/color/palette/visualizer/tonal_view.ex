@@ -77,50 +77,10 @@ defmodule Color.Palette.Visualizer.TonalView do
   end
 
   defp css_export(%Tonal{} = palette) do
-    name = palette.name || "color"
-    labels = Tonal.labels(palette)
-
-    body =
-      Enum.map(labels, fn label ->
-        color = Map.fetch!(palette.stops, label)
-
-        [
-          "  --",
-          Render.escape(name),
-          "-",
-          Render.escape(to_string(label)),
-          ": ",
-          Render.escape(Color.to_hex(color)),
-          ";\n"
-        ]
-      end)
-
-    [":root {\n", body, "}\n"]
+    palette |> Tonal.to_css() |> Render.escape()
   end
 
   defp tailwind_export(%Tonal{} = palette) do
-    name = palette.name || "color"
-    labels = Tonal.labels(palette)
-
-    body =
-      Enum.map(labels, fn label ->
-        color = Map.fetch!(palette.stops, label)
-
-        [
-          "    ",
-          Render.escape(to_string(label)),
-          ": \"",
-          Render.escape(Color.to_hex(color)),
-          "\",\n"
-        ]
-      end)
-
-    [
-      "theme: {\n  extend: {\n    colors: {\n      ",
-      Render.escape(name),
-      ": {\n",
-      body,
-      "      }\n    }\n  }\n}\n"
-    ]
+    palette |> Tonal.to_tailwind() |> Render.escape()
   end
 end
