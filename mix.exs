@@ -74,9 +74,11 @@ defmodule Color.MixProject do
       extras: [
         "README.md",
         "guides/palettes.md",
+        "guides/visualizer.md",
         "LICENSE.md",
         "CHANGELOG.md"
       ],
+      assets: %{"guides/images" => "images"},
       groups_for_extras: [
         Guides: ~r{guides/.*\.md}
       ],
@@ -120,7 +122,13 @@ defmodule Color.MixProject do
       "Conversion Math": ~r/Color.Conversion/,
       ANSI: [Color.ANSI],
       LED: ~r/Color\.LED/,
-      Palettes: ~r/Color\.Palette/,
+      Palettes: [
+        Color.Palette,
+        Color.Palette.Tonal,
+        Color.Palette.Theme,
+        Color.Palette.Contrast
+      ],
+      Visualizer: ~r/Color\.Palette\.Visualizer/,
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [
@@ -140,6 +148,11 @@ defmodule Color.MixProject do
 
   defp deps do
     [
+      # Optional — only required if the caller uses
+      # Color.Palette.Visualizer. Declared as optional so the core
+      # library keeps its zero-runtime-deps story.
+      {:plug, "~> 1.15", optional: true},
+      {:bandit, "~> 1.5", optional: true},
       {:ex_doc, "~> 0.32", only: [:dev], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:benchee, "~> 1.3", only: [:dev], runtime: false},

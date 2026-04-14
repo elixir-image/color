@@ -1,0 +1,169 @@
+defmodule Color.Palette.VisualizerTest do
+  use ExUnit.Case, async: true
+
+  import Plug.Test
+  import Plug.Conn
+
+  @opts Color.Palette.Visualizer.init([])
+
+  describe "routing" do
+    test "GET / redirects to /tonal" do
+      conn = conn(:get, "/") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["/tonal"]
+    end
+
+    test "GET /unknown returns 404" do
+      conn = conn(:get, "/unknown") |> Color.Palette.Visualizer.call(@opts)
+      assert conn.status == 404
+    end
+
+    test "serves CSS with a long cache header" do
+      conn = conn(:get, "/assets/style.css") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert ["text/css" <> _] = get_resp_header(conn, "content-type")
+      assert ["public, max-age=31536000, immutable"] = get_resp_header(conn, "cache-control")
+      assert conn.resp_body =~ ".vz-swatch"
+    end
+  end
+
+  describe "tonal view" do
+    test "renders default seed" do
+      conn = conn(:get, "/tonal") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Tonal scale"
+      assert conn.resp_body =~ "CSS custom properties"
+      assert conn.resp_body =~ "Tailwind config"
+    end
+
+    test "honours the seed query param" do
+      conn = conn(:get, "/tonal?seed=%23ff00aa") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      # The exported CSS block should contain a stop derived from this seed.
+      assert conn.resp_body =~ "--color-500"
+    end
+
+    test "honours the hue_drift flag" do
+      drift =
+        conn(:get, "/tonal?seed=%233b82f6&hue_drift=1") |> Color.Palette.Visualizer.call(@opts)
+
+      flat = conn(:get, "/tonal?seed=%233b82f6") |> Color.Palette.Visualizer.call(@opts)
+
+      assert drift.status == 200
+      assert flat.status == 200
+      refute drift.resp_body == flat.resp_body
+    end
+
+    test "invalid seed renders an error message, not a 500" do
+      conn = conn(:get, "/tonal?seed=not-a-color") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Could not parse seed"
+    end
+  end
+
+  describe "theme view" do
+    test "renders default theme" do
+      conn = conn(:get, "/theme") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Tonal scales"
+      assert conn.resp_body =~ "Role tokens"
+      assert conn.resp_body =~ "on_primary"
+      assert conn.resp_body =~ "surface"
+    end
+
+    test "dark scheme" do
+      light =
+        conn(:get, "/theme?seed=%233b82f6&scheme=light") |> Color.Palette.Visualizer.call(@opts)
+
+      dark =
+        conn(:get, "/theme?seed=%233b82f6&scheme=dark") |> Color.Palette.Visualizer.call(@opts)
+
+      assert light.status == 200
+      assert dark.status == 200
+      assert dark.resp_body =~ "Role tokens (dark)"
+      assert light.resp_body =~ "Role tokens (light)"
+    end
+
+    test "unknown scheme falls back to light" do
+      conn = conn(:get, "/theme?scheme=purple") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Role tokens (light)"
+    end
+  end
+
+  describe "contrast view" do
+    test "renders default contrast palette" do
+      conn = conn(:get, "/contrast") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Matrix (WCAG 2.x)"
+    end
+
+    test "APCA metric" do
+      conn = conn(:get, "/contrast?metric=apca") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Matrix (APCA W3)"
+    end
+
+    test "custom background" do
+      conn = conn(:get, "/contrast?background=black") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Stops (against"
+    end
+
+    test "invalid background surfaces an error, not a 500" do
+      conn =
+        conn(:get, "/contrast?background=not-a-color") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Could not parse"
+    end
+  end
+
+  describe "mounting via forward" do
+    # Simulate `forward "/palette", ...` by setting script_name.
+    defp mounted_conn(method, path) do
+      conn(method, "/palette" <> path)
+      |> Map.put(:script_name, ["palette"])
+      |> Map.update!(:path_info, fn ["palette" | rest] -> rest end)
+    end
+
+    test "builds links with the mounted base path" do
+      conn = mounted_conn(:get, "/tonal") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ ~s(href="/palette/assets/style.css")
+      assert conn.resp_body =~ ~s(href="/palette/tonal")
+    end
+
+    test "root redirect respects the base path" do
+      conn = mounted_conn(:get, "/") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["/palette/tonal"]
+    end
+  end
+
+  describe "Standalone" do
+    test "start/1 and stop/1 work end-to-end" do
+      {:ok, pid} = Color.Palette.Visualizer.Standalone.start(port: 0)
+      assert is_pid(pid)
+      assert :ok = Color.Palette.Visualizer.Standalone.stop(pid)
+    end
+
+    test "child_spec/1 returns a valid child spec" do
+      spec = Color.Palette.Visualizer.Standalone.child_spec(port: 0)
+
+      assert %{id: Color.Palette.Visualizer.Standalone, start: {Bandit, :start_link, [_]}} = spec
+    end
+  end
+end

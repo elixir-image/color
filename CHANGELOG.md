@@ -2,11 +2,17 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## Color version 0.4.0
+## [0.5.0] — April 14th, 2026
 
 ### Added
 
-* `Color.Palette` module with three palette-generation algorithms for design systems and web sites. `Color.Palette.Tonal` generates a single tonal scale (Tailwind / Radix / Open Color style) from a seed colour, producing N shades from light to dark using an Oklch lightness sweep with chroma damping at the extremes, optional perceptual hue drift, and snap-to-seed. `Color.Palette.Theme` generates a complete Material Design 3 style theme — five coordinated tonal scales (primary, secondary, tertiary, neutral, neutral-variant) from one seed — with `Theme.role/3` exposing Material role tokens (`:primary`, `:on_primary`, `:surface`, `:outline`, …) for both light and dark schemes. `Color.Palette.Contrast` generates Adobe Leonardo style contrast-targeted palettes — binary searches Oklch lightness for a colour whose WCAG or APCA contrast against a chosen background matches each target ratio exactly, with unreachable targets explicitly flagged.
+* `Color.Palette` module with three palette-generation algorithms for design systems and web sites. 
+
+* `Color.Palette.Visualizer` — a Plug-based web UI for previewing the three palette algorithms. Three views modelled on [UI Colors](https://uicolors.app/generate) (Tonal), [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/) (Theme), and [Adobe Leonardo](https://leonardocolor.io/) (Contrast).
+
+## [0.4.0]
+
+### Added
 
 * `Color.LED` module with support for multi-channel addressable LED pixels that include extra white channels. `Color.LED.RGBW` covers four-channel pixels (R, G, B, W) used by WS2814 and SK6812-RGBW. `Color.LED.RGBWW` covers five-channel RGB+CCT pixels (R, G, B, WW, CW) used by WS2805 and several SK6812 variants. Both provide `from_srgb/2`, `to_srgb/1`, and `to_xyz/1`. `Color.LED.chip_options/1` returns recommended extraction options for common chip variants (`:ws2814_ww`, `:ws2814_nw`, `:ws2814_cw`, `:sk6812_ww`, `:sk6812_nw`, `:sk6812_cw`, `:ws2805`).
 
@@ -20,7 +26,7 @@ All notable changes to this project are documented here. The format is based on 
 
 * Changed all colorspace module names to be the closest possible match to their standard names.
 
-## Color version 0.3.0
+## [0.3.0]
 
 ### Added
 
