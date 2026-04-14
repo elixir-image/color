@@ -166,8 +166,11 @@ defmodule Color.Gamut.DiagramTest do
     end
 
     test "zero denominator guards don't crash" do
-      assert {0.0, 0.0} = Diagram.xy_to_uv({0.0, 0.0})
-      assert {0.0, 0.0} = Diagram.uv_to_xy({0.0, 0.0})
+      # Use explicit +0.0 to satisfy OTP 28's signed-zero pattern
+      # match rules; we only care that the guards return zero of
+      # either sign rather than dividing by zero.
+      assert {+0.0, +0.0} = Diagram.xy_to_uv({0.0, 0.0})
+      assert {+0.0, +0.0} = Diagram.uv_to_xy({0.0, 0.0})
     end
   end
 end
