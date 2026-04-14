@@ -33,7 +33,7 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 
 * **Color harmonies**. Complementary, analogous, triadic, tetradic, and split-complementary in any cylindrical space (default Oklch).
 
-* **Palette generation**. `Color.Palette.tonal/2` produces Tailwind / Radix style tonal scales in Oklch. `Color.Palette.theme/2` produces Material Design 3 style themes — five coordinated scales from one seed, with Material role tokens. `Color.Palette.contrast/2` produces Adobe Leonardo style contrast-targeted palettes that hit exact WCAG or APCA ratios against a chosen background.
+* **Palette generation**. `Color.Palette.tonal/2` produces Tailwind / Radix style tonal scales in Oklch. `Color.Palette.theme/2` produces Material Design 3 style themes — five coordinated scales from one seed, with Material role tokens. `Color.Palette.contrast/2` produces Adobe Leonardo style contrast-targeted palettes that hit exact WCAG or APCA ratios against a chosen background. `Color.Palette.contrast_scale/2` produces contrast-constrained tonal scales (Ström-Awn style) where any two stops ≥ `apart` label units apart are guaranteed to satisfy a minimum contrast ratio by construction.
 
 * **Color temperature**. CCT ↔ chromaticity, Planckian locus and CIE daylight locus.
 
@@ -144,6 +144,12 @@ theme = Color.Palette.theme("#3b82f6")
 accessible = Color.Palette.contrast("#3b82f6",
   background: "white",
   targets: [3.0, 4.5, 7.0]   # WCAG AA large, AA, AAA
+)
+
+# Contrast-constrained tonal scale (Ström-Awn style) — any two stops
+# ≥ 500 apart are guaranteed to contrast ≥ 4.5:1 against each other
+guaranteed = Color.Palette.contrast_scale("#3b82f6",
+  guarantee: {4.5, 500}
 )
 ```
 

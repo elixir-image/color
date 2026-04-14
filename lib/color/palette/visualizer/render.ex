@@ -52,7 +52,13 @@ defmodule Color.Palette.Visualizer.Render do
   end
 
   defp header(active, seed, base, extra_fields) do
-    tabs = [{"tonal", "Tonal"}, {"theme", "Theme"}, {"contrast", "Contrast"}]
+    tabs = [
+      {"tonal", "Tonal"},
+      {"theme", "Theme"},
+      {"contrast", "Contrast"},
+      {"scale", "Scale"}
+    ]
+
     seed_hex = resolve_hex(seed, "#3b82f6")
 
     [

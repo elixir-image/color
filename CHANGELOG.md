@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
+* `Color.Palette.ContrastScale` — a fourth palette algorithm, inspired by Matt Ström-Awn's [*Generating colour palettes with math*](https://mattstromawn.com/writing/generating-color-palettes/).
+
 * `Color.DesignTokens` — encode and decode W3C [Design Tokens Community Group](https://www.designtokens.org/tr/2025.10/color/) color tokens (2025.10 draft).
 
 * `Color.Palette.Tonal.to_tokens/2`, `Color.Palette.Theme.to_tokens/2`, and `Color.Palette.Contrast.to_tokens/2` emit each palette type as a DTCG-compliant token map ready for `:json.encode/1`.

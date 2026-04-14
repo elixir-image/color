@@ -5,9 +5,11 @@ defmodule Color.PaletteTest do
   doctest Color.Palette.Tonal
   doctest Color.Palette.Theme
   doctest Color.Palette.Contrast
+  doctest Color.Palette.ContrastScale
 
   alias Color.Palette
   alias Color.Palette.Contrast
+  alias Color.Palette.ContrastScale
   alias Color.Palette.Theme
   alias Color.Palette.Tonal
 
@@ -519,6 +521,193 @@ defmodule Color.PaletteTest do
 
       assert light["role"]["primary"]["$value"] == "{palette.primary.40}"
       assert dark["role"]["primary"]["$value"] == "{palette.primary.80}"
+    end
+  end
+
+  describe "ContrastScale.new/2" do
+    test "produces the default Tailwind stop set" do
+      palette = ContrastScale.new("#3b82f6")
+
+      assert Map.keys(palette.stops) |> Enum.sort() ==
+               [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+    end
+
+    test "stores seed, seed_stop, and background" do
+      palette = ContrastScale.new("#3b82f6")
+
+      assert %Color.SRGB{} = palette.seed
+      assert palette.seed_stop in Map.keys(palette.stops)
+      assert %Color.SRGB{} = palette.background
+    end
+
+    test "default guarantee is {4.5, 500}" do
+      palette = ContrastScale.new("#3b82f6")
+      assert palette.guarantee == {4.5, 500}
+    end
+
+    test "pairwise invariant: any two stops ≥ apart units apart pass ratio" do
+      palette = ContrastScale.new("#3b82f6")
+      {ratio, apart} = palette.guarantee
+      stops = ContrastScale.labels(palette)
+
+      for a <- stops, b <- stops, b - a >= apart do
+        contrast =
+          Color.Contrast.wcag_ratio(Map.fetch!(palette.stops, a), Map.fetch!(palette.stops, b))
+
+        # Allow a tiny rounding tolerance — the search converges to within
+        # a few hundredths of the target, and gamut-mapping at the extremes
+        # introduces sub-0.1 drift. 0.1 keeps this a meaningful assertion
+        # (real misses are many tenths short) without flaking on rounding.
+        assert contrast >= ratio - 0.1,
+               "invariant broken: stops #{a} and #{b} differ by #{b - a} (≥ #{apart}) " <>
+                 "but contrast is #{Float.round(contrast, 3)} < #{ratio}"
+      end
+    end
+
+    test "custom guarantee {3.0, 300}" do
+      palette = ContrastScale.new("#3b82f6", guarantee: {3.0, 300})
+      assert palette.guarantee == {3.0, 300}
+
+      stops = ContrastScale.labels(palette)
+
+      for {a, b} <- Enum.zip(stops, tl(stops)) ++ [],
+          b - a >= 300 do
+        contrast =
+          Color.Contrast.wcag_ratio(Map.fetch!(palette.stops, a), Map.fetch!(palette.stops, b))
+
+        assert contrast >= 2.9, "stops #{a} -> #{b} only #{contrast}:1"
+      end
+    end
+
+    test "preserves seed exactly at seed_stop" do
+      {:ok, seed} = Color.new("#3b82f6")
+      palette = ContrastScale.new(seed)
+
+      assert Map.fetch!(palette.stops, palette.seed_stop) == seed
+    end
+
+    test "records achieved contrast per stop" do
+      palette = ContrastScale.new("#3b82f6")
+
+      for {_label, achieved} <- palette.achieved do
+        assert is_number(achieved) and achieved >= 1.0
+      end
+    end
+
+    test "APCA metric" do
+      palette = ContrastScale.new("#3b82f6", metric: :apca, guarantee: {60.0, 500})
+      assert palette.metric == :apca
+    end
+
+    test "custom background (black)" do
+      palette = ContrastScale.new("#3b82f6", background: "black")
+
+      # Against black, the invariant still holds.
+      {ratio, apart} = palette.guarantee
+      stops = ContrastScale.labels(palette)
+
+      for a <- stops, b <- stops, b - a >= apart do
+        contrast =
+          Color.Contrast.wcag_ratio(Map.fetch!(palette.stops, a), Map.fetch!(palette.stops, b))
+
+        assert contrast >= ratio - 0.1
+      end
+    end
+
+    test "hue drift produces a slightly different scale" do
+      flat = ContrastScale.new("#3b82f6", hue_drift: false)
+      drifted = ContrastScale.new("#3b82f6", hue_drift: true)
+
+      refute Map.fetch!(flat.stops, 50) == Map.fetch!(drifted.stops, 50)
+    end
+  end
+
+  describe "ContrastScale validation" do
+    test "rejects unknown options" do
+      assert_raise Color.PaletteError, ~r/unknown_option/, fn ->
+        ContrastScale.new("#3b82f6", nope: true)
+      end
+    end
+
+    test "rejects non-numeric stops" do
+      assert_raise Color.PaletteError, ~r/invalid_stops/, fn ->
+        ContrastScale.new("#3b82f6", stops: [:a, :b, :c])
+      end
+    end
+
+    test "rejects duplicate stops" do
+      assert_raise Color.PaletteError, ~r/duplicate_stops/, fn ->
+        ContrastScale.new("#3b82f6", stops: [1, 2, 2, 3])
+      end
+    end
+
+    test "rejects invalid guarantee shape" do
+      assert_raise Color.PaletteError, ~r/invalid_guarantee/, fn ->
+        ContrastScale.new("#3b82f6", guarantee: {0.5, 100})
+      end
+
+      assert_raise Color.PaletteError, ~r/invalid_guarantee/, fn ->
+        ContrastScale.new("#3b82f6", guarantee: :nope)
+      end
+    end
+
+    test "rejects bad metric" do
+      assert_raise Color.PaletteError, ~r/invalid_metric/, fn ->
+        ContrastScale.new("#3b82f6", metric: :fake)
+      end
+    end
+  end
+
+  describe "ContrastScale.fetch/2 and labels/1" do
+    test "fetch returns the colour for a known label" do
+      palette = ContrastScale.new("#3b82f6")
+      assert {:ok, %Color.SRGB{}} = ContrastScale.fetch(palette, 500)
+    end
+
+    test "fetch returns :error for unknown labels" do
+      palette = ContrastScale.new("#3b82f6")
+      assert :error = ContrastScale.fetch(palette, :missing)
+    end
+
+    test "labels/1 preserves order" do
+      palette = ContrastScale.new("#3b82f6", stops: [10, 20, 30])
+      assert ContrastScale.labels(palette) == [10, 20, 30]
+    end
+  end
+
+  describe "ContrastScale.to_tokens/2 (DTCG)" do
+    test "emits a DTCG token group" do
+      palette = ContrastScale.new("#3b82f6", name: "blue")
+      tokens = ContrastScale.to_tokens(palette)
+
+      assert Map.keys(tokens) == ["blue"]
+      assert tokens["blue"]["500"]["$type"] == "color"
+    end
+
+    test "records achieved contrast in $extensions" do
+      palette = ContrastScale.new("#3b82f6")
+      tokens = ContrastScale.to_tokens(palette)
+
+      ext = tokens["contrast_scale"]["500"]["$extensions"]["color"]
+      assert is_number(ext["achieved"])
+      assert ext["metric"] == "wcag"
+    end
+
+    test "default emit space is Oklch" do
+      palette = ContrastScale.new("#3b82f6")
+      tokens = ContrastScale.to_tokens(palette)
+
+      assert tokens["contrast_scale"]["500"]["$value"]["colorSpace"] == "oklch"
+    end
+  end
+
+  describe "Color.Palette.contrast_scale/2 façade" do
+    test "delegates to ContrastScale.new/2" do
+      via = Palette.contrast_scale("#3b82f6", name: "x")
+      direct = ContrastScale.new("#3b82f6", name: "x")
+
+      assert via.stops == direct.stops
+      assert via.name == "x"
     end
   end
 

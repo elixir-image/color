@@ -2,7 +2,7 @@
 
 `Color.Palette.Visualizer` is a small Plug-based web UI for previewing the palettes produced by `Color.Palette`. It runs standalone during development or mounts inside an existing Phoenix / Plug app. Every input lives in the URL — share a URL and you've shared the palette.
 
-The visualizer is modelled on three widely-referenced sites, one per palette algorithm — [UI Colors](https://uicolors.app/generate) for Tonal, [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/) for Theme, and [Adobe Leonardo](https://leonardocolor.io/) for Contrast. See the [palette guide](palettes.md) for background on the three algorithms themselves.
+The visualizer is modelled on three widely-referenced sites, one per palette algorithm — [UI Colors](https://uicolors.app/generate) for Tonal, [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/) for Theme, and [Adobe Leonardo](https://leonardocolor.io/) for Contrast. The Scale tab covers the fourth algorithm — contrast-constrained tonal scales, inspired by Matt Ström-Awn's [*Generating colour palettes with math*](https://mattstromawn.com/writing/generating-color-palettes/). See the [palette guide](palettes.md) for background on the four algorithms themselves.
 
 ## Install and run
 
@@ -110,6 +110,22 @@ Below the swatches: a **matrix**. One row per generated stop, one column per com
 * `seed` — seed colour.
 * `background` — the colour to measure contrast against. Default `white`; try `black` for dark-mode planning.
 * `metric` — `wcag` (default) or `apca`.
+
+### Scale — contrast-constrained tonal scale
+
+![Scale view](images/scale.png)
+
+**URL.** `/scale?seed=%233b82f6&background=white&ratio=4.5&apart=500&metric=wcag`
+
+**What it shows.** A Tailwind-style numeric scale (50–950) where **any two stops whose labels differ by at least `apart` are guaranteed to satisfy at least `ratio` contrast against each other**. The header notes the guarantee in plain English ("guarantees 4.5 : 1 at ≥ 500 apart"). Below the scale, a **pairwise contrast matrix** shows every stop-against-every-stop contrast — green cells at or past the `apart` threshold confirm the invariant visually, any red cell at that distance would be a violation. The three-column export block at the bottom provides CSS custom properties, Tailwind config, and W3C DTCG Design Tokens (including the achieved-vs-background ratio in each token's `$extensions`).
+
+**Options.**
+* `seed` — seed colour.
+* `background` — the colour the contrast is measured against. Default `white`.
+* `ratio` — the contrast threshold that distances ≥ `apart` must exceed. Default `4.5`.
+* `apart` — the minimum label distance that triggers the contrast guarantee. Default `500`.
+* `metric` — `wcag` (default) or `apca`. For APCA, `ratio` is interpreted as an Lc value (typical targets 45–90).
+* `hue_drift` — enables the paper's Bezold-Brücke compensation. Off by default.
 
 ## Sharing palettes
 

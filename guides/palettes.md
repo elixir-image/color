@@ -135,6 +135,63 @@ If you're not sure, the decision tree is:
 1. **Do you need more than one seed?** Yes → `theme/2`. No → continue.
 2. **Do the stops need to guarantee contrast against a known background?** Yes → `contrast/2`. No → `tonal/2`.
 
+## The fourth algorithm: contrast-constrained tonal scales
+
+![Contrast-constrained scale view](images/scale.png)
+
+A fourth algorithm sits between `tonal/2` and `contrast/2` — the hybrid described by Matt Ström-Awn in [*Generating colour palettes with math*](https://mattstromawn.com/writing/generating-color-palettes/). Implemented in the library as `Color.Palette.ContrastScale` and exposed via `Color.Palette.contrast_scale/2`.
+
+**What it does.** Generates a Tailwind-style numeric scale where **any two stops whose labels differ by at least `apart` are guaranteed to satisfy a minimum contrast ratio**. The default guarantee — `{4.5, 500}` — says any pair of stops ≥ 500 label units apart (e.g. 100 and 600, or 300 and 800) contrasts ≥ 4.5 : 1 against each other. Contrast becomes a structural property of the scale, not a per-stop binary search.
+
+**How it's built.**
+
+1. Convert the seed to Oklch. Hold hue and chroma roughly constant.
+
+2. Let `t = apart / (max_label − min_label)` — the fraction of the scale that the `apart` distance spans.
+
+3. For each stop at normalised position `p ∈ [0, 1]`, compute its **target contrast against the background**: `C(p) = ratio ^ (p / t)`. The lightest stop starts at contrast 1 (equal to the background); the darkest at `ratio ^ (1/t)`.
+
+4. Binary-search Oklch lightness for a colour that achieves `C(p)` against the background.
+
+5. Because contrast(i, j) = C_j / C_i for stops on the same side of the background, the pairwise invariant falls out: any two stops whose positions differ by `≥ t` contrast by at least `ratio`.
+
+**Usage.**
+
+```elixir
+# Default guarantee: any two stops ≥ 500 apart pass 4.5:1
+scale = Color.Palette.contrast_scale("#3b82f6")
+
+# Any two stops ≥ 300 apart pass 3:1
+scale = Color.Palette.contrast_scale("#3b82f6", guarantee: {3.0, 300})
+
+# Works against any background — same invariant, different anchoring
+dark_scale = Color.Palette.contrast_scale("#3b82f6", background: "black")
+
+# APCA targets
+apca = Color.Palette.contrast_scale("#3b82f6",
+  metric: :apca,
+  guarantee: {60.0, 500}
+)
+```
+
+**When to reach for it.**
+
+* You want a Tailwind-style numeric scale *and* you want pairwise contrast guarantees baked in.
+
+* You want light and dark modes to follow the same contrast rules by construction — regenerate with a different `:background` and the invariant holds on both.
+
+* You're done auditing palette pairs after the fact.
+
+**When one of the other three is better.**
+
+* You want component states tied to *specific* ratios (resting 3:1, focus 4.5:1, disabled 1.3:1) — use `contrast/2`, which lets you name individual targets.
+
+* You want maximum visual smoothness between adjacent stops with no accessibility requirement — use `tonal/2`, which optimises for even lightness instead of even contrast.
+
+* You want a full theme across five coordinated sub-palettes — use `theme/2`.
+
+**Relation to the paper.** Ström-Awn's paper also describes a saturation parabola `S(n) = −4n² + 4n` and a Bezold-Brücke hue drift `H(n) = H_base + 5(1 − n)`. These are available here as respectively our Oklch `sin(π · L)` chroma damping (applied by `Color.Gamut`) and the `hue_drift: true` option on `ContrastScale` (which uses the paper's exact formula).
+
 ## Practical notes
 
 ### Picking a seed
@@ -272,4 +329,5 @@ The whole process — write `guides/palettes.md`, realise we need a logo, genera
 * Google (2021). *[Material Design 3: Color system](https://m3.material.io/styles/color/system/overview)*. The source of the role tokens.
 * Stefanov, L. (2022). *[Radix Colors](https://www.radix-ui.com/colors)*. Detailed write-up on hue drift, chroma at the extremes, and designer-curated tone curves.
 * Adobe (2021). *[Leonardo](https://leonardocolor.io/)*. The original contrast-targeted palette generator.
+* Ström-Awn, M. (2024). *[Generating colour palettes with math](https://mattstromawn.com/writing/generating-color-palettes/)*. Describes a contrast-invariant tonal scale built in OKHsl — the hybrid approach discussed above, with a nicely-motivated derivation of the saturation parabola, the Bezold-Brücke hue drift, and the contrast-integrated lightness function.
 * Somers, A. (2024). *[APCA contrast](https://github.com/Myndex/apca-w3)*. Perception-based contrast metric.

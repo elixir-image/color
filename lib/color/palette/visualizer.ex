@@ -63,6 +63,7 @@ defmodule Color.Palette.Visualizer do
     plug(:dispatch)
 
     alias Color.Palette.Visualizer.Assets
+    alias Color.Palette.Visualizer.ContrastScaleView
     alias Color.Palette.Visualizer.ContrastView
     alias Color.Palette.Visualizer.ThemeView
     alias Color.Palette.Visualizer.TonalView
@@ -88,6 +89,11 @@ defmodule Color.Palette.Visualizer do
     get "/contrast" do
       params = parse_params(conn.params, :contrast)
       html(conn, ContrastView.render(params, base_path(conn)))
+    end
+
+    get "/scale" do
+      params = parse_params(conn.params, :scale)
+      html(conn, ContrastScaleView.render(params, base_path(conn)))
     end
 
     get "/assets/style.css" do
@@ -137,6 +143,43 @@ defmodule Color.Palette.Visualizer do
         metric: atom_default(Map.get(params, "metric"), [:wcag, :apca], :wcag)
       }
     end
+
+    defp parse_params(params, :scale) do
+      %{
+        seed: resolve_seed(params, "#3b82f6"),
+        background: resolve_bg(params, "white"),
+        metric: atom_default(Map.get(params, "metric"), [:wcag, :apca], :wcag),
+        ratio: number_default(Map.get(params, "ratio"), 4.5),
+        apart: number_default(Map.get(params, "apart"), 500),
+        hue_drift: truthy?(Map.get(params, "hue_drift"))
+      }
+    end
+
+    defp resolve_bg(params, default) do
+      text = Map.get(params, "background") |> nilify_blank()
+      picker = Map.get(params, "bg_picker") |> nilify_blank()
+      initial = Map.get(params, "bg_picker_initial") |> nilify_blank()
+
+      cond do
+        text != nil and text != initial -> text
+        picker != nil -> picker
+        text != nil -> text
+        true -> default
+      end
+    end
+
+    defp number_default(nil, default), do: default
+    defp number_default("", default), do: default
+
+    defp number_default(value, default) when is_binary(value) do
+      case Float.parse(value) do
+        {f, ""} -> f
+        {f, rest} when is_float(f) and byte_size(rest) <= 2 -> f
+        _ -> default
+      end
+    end
+
+    defp number_default(_, default), do: default
 
     # The form has two inputs for `seed`: the native <input
     # type="color"> (name="seed_picker") and a free-text field

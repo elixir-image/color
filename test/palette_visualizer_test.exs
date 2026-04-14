@@ -165,6 +165,44 @@ defmodule Color.Palette.VisualizerTest do
     end
   end
 
+  describe "scale view (contrast-constrained tonal)" do
+    test "renders default scale" do
+      conn = conn(:get, "/scale") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "guarantees 4.5"
+      assert conn.resp_body =~ "Pairwise contrast matrix"
+    end
+
+    test "honours ratio and apart options" do
+      conn =
+        conn(:get, "/scale?ratio=3&apart=300")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "guarantees 3"
+      assert conn.resp_body =~ "≥ 300 apart"
+    end
+
+    test "APCA metric" do
+      conn =
+        conn(:get, "/scale?metric=apca&ratio=60&apart=500")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Lc"
+    end
+
+    test "exports CSS, Tailwind, and Design Tokens" do
+      conn = conn(:get, "/scale") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.resp_body =~ "CSS custom properties"
+      assert conn.resp_body =~ "Tailwind config"
+      assert conn.resp_body =~ "Design Tokens"
+      assert conn.resp_body =~ "oklch"
+    end
+  end
+
   describe "contrast view" do
     test "renders default contrast palette" do
       conn = conn(:get, "/contrast") |> Color.Palette.Visualizer.call(@opts)

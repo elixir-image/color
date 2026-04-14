@@ -23,6 +23,12 @@ defmodule Color.Palette do
     ratios against a chosen background. Use this when you need
     accessibility-guaranteed component states.
 
+  * `contrast_scale/2` — a **contrast-constrained tonal scale**
+    (Matt Ström-Awn's approach) — a numbered scale where any
+    two stops ≥ `apart` label units apart are guaranteed to
+    satisfy a minimum contrast ratio. A hybrid between `tonal`
+    and `contrast`.
+
   ## Working space
 
   All palette algorithms operate in **Oklch**, the cylindrical
@@ -36,6 +42,7 @@ defmodule Color.Palette do
   """
 
   alias Color.Palette.Contrast
+  alias Color.Palette.ContrastScale
   alias Color.Palette.Theme
   alias Color.Palette.Tonal
 
@@ -139,4 +146,30 @@ defmodule Color.Palette do
   """
   @spec contrast(Color.input(), keyword()) :: Contrast.t()
   defdelegate contrast(seed, options \\ []), to: Contrast, as: :new
+
+  @doc """
+  Generates a contrast-constrained tonal scale. See
+  `Color.Palette.ContrastScale` for the full algorithm.
+
+  ### Arguments
+
+  * `seed` is anything accepted by `Color.new/1`.
+
+  ### Options
+
+  See `Color.Palette.ContrastScale.new/2`.
+
+  ### Returns
+
+  * A `Color.Palette.ContrastScale` struct.
+
+  ### Examples
+
+      iex> palette = Color.Palette.contrast_scale("#3b82f6")
+      iex> Map.keys(palette.stops) |> Enum.sort()
+      [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
+
+  """
+  @spec contrast_scale(Color.input(), keyword()) :: ContrastScale.t()
+  defdelegate contrast_scale(seed, options \\ []), to: ContrastScale, as: :new
 end

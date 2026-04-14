@@ -1,7 +1,7 @@
 defmodule Color.MixProject do
   use Mix.Project
 
-  @version "0.5.0"
+  @version "0.6.0"
 
   def project do
     [
@@ -126,7 +126,8 @@ defmodule Color.MixProject do
         Color.Palette,
         Color.Palette.Tonal,
         Color.Palette.Theme,
-        Color.Palette.Contrast
+        Color.Palette.Contrast,
+        Color.Palette.ContrastScale
       ],
       Visualizer: ~r/Color\.Palette\.Visualizer/,
       "Design Tokens": [Color.DesignTokens],
