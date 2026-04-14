@@ -127,7 +127,7 @@ Start with what *kind of answer* you need:
 | Many accent colours that look like siblings | `theme/2` and use `:primary`, `:secondary`, `:tertiary` |
 | The exact stops Tailwind produces for a custom hue | `tonal/2` |
 | Colour-picker tool output | `tonal/2` per user input |
-| Status / semantic colours (success, warning, error, info) | Four independent `tonal/2` calls with distinct seeds |
+| Status / semantic colours (success, warning, error, info) that match a brand seed | `Color.Palette.semantic/3` → `tonal/2` |
 | Dynamic theming based on a hero image's dominant colour | `theme/2` (extract dominant, feed as seed) |
 
 If you're not sure, the decision tree is:

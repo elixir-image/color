@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
+* `Color.Palette.semantic/3` and `semantic_categories/0` — synthesise a colour in a chosen category (semantic `:success`, `:danger`, `:warning`, `:info`, `:neutral`, or raw hue `:red`, `:orange`, `:yellow`, `:green`, `:teal`, `:blue`, `:purple`, `:pink`) from a seed while preserving the seed's Oklch lightness and chroma. Lets a brand colour drive a matched set of semantic accents — a success green that feels like the same palette as the brand blue — without hand-picking every one. Options: `:chroma_factor` to mute, `:lightness` to override, `:gamut` to target a non-sRGB display. Canonical workflow is `semantic/3` → any palette generator (`tonal/2`, `theme/2`, `contrast/2`, `contrast_scale/2`) to produce a full scale for the role.
+
 * Palette gamut checks. `Color.Palette.in_gamut?/2` and `Color.Palette.gamut_report/2` answer "is every stop in this palette inside the chosen RGB working space?", with `gamut_report/2` returning a per-stop breakdown listing exactly which stops failed.
 
 * Public APIs for designer-tool integrations. 

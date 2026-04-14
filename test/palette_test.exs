@@ -748,6 +748,156 @@ defmodule Color.PaletteTest do
     end
   end
 
+  describe "semantic/3" do
+    test "each hue category lands in the expected Oklch hue range" do
+      expected = %{
+        red: {0.0, 45.0},
+        orange: {40.0, 75.0},
+        yellow: {80.0, 115.0},
+        green: {125.0, 165.0},
+        teal: {170.0, 215.0},
+        blue: {230.0, 275.0},
+        purple: {285.0, 325.0},
+        pink: {325.0, 360.0}
+      }
+
+      for {category, {lo, hi}} <- expected do
+        color = Palette.semantic("#3b82f6", category)
+        {:ok, oklch} = Color.convert(color, Color.Oklch)
+
+        assert oklch.h >= lo and oklch.h <= hi,
+               "category #{inspect(category)} hue #{oklch.h} outside [#{lo}, #{hi}]"
+      end
+    end
+
+    test "semantic aliases resolve to the right hue" do
+      {:ok, danger} = Color.convert(Palette.semantic("#3b82f6", :danger), Color.Oklch)
+      {:ok, red} = Color.convert(Palette.semantic("#3b82f6", :red), Color.Oklch)
+      assert_in_delta danger.h, red.h, 1.0e-3
+
+      {:ok, success} = Color.convert(Palette.semantic("#3b82f6", :success), Color.Oklch)
+      {:ok, green} = Color.convert(Palette.semantic("#3b82f6", :green), Color.Oklch)
+      assert_in_delta success.h, green.h, 1.0e-3
+
+      {:ok, warning} = Color.convert(Palette.semantic("#3b82f6", :warning), Color.Oklch)
+      {:ok, orange} = Color.convert(Palette.semantic("#3b82f6", :orange), Color.Oklch)
+      assert_in_delta warning.h, orange.h, 1.0e-3
+
+      {:ok, info} = Color.convert(Palette.semantic("#3b82f6", :info), Color.Oklch)
+      {:ok, blue} = Color.convert(Palette.semantic("#3b82f6", :blue), Color.Oklch)
+      assert_in_delta info.h, blue.h, 1.0e-3
+    end
+
+    test "preserves seed's lightness and chroma" do
+      seed = "#3b82f6"
+      {:ok, seed_oklch} = Color.convert(seed, Color.Oklch)
+
+      color = Palette.semantic(seed, :red)
+      {:ok, oklch} = Color.convert(color, Color.Oklch)
+
+      # Lightness is preserved exactly; chroma may be gamut-clipped
+      # but should be close to the seed's (within 0.05).
+      assert_in_delta oklch.l, seed_oklch.l, 0.02
+      assert_in_delta oklch.c, seed_oklch.c, 0.08
+    end
+
+    test ":neutral strips chroma but preserves hue and lightness" do
+      seed = "#3b82f6"
+      {:ok, seed_oklch} = Color.convert(seed, Color.Oklch)
+
+      color = Palette.semantic(seed, :neutral)
+      {:ok, oklch} = Color.convert(color, Color.Oklch)
+
+      assert oklch.c < 0.05
+      assert_in_delta oklch.l, seed_oklch.l, 0.02
+      assert_in_delta oklch.h, seed_oklch.h, 5.0
+    end
+
+    test ":chroma_factor option mutes or amplifies" do
+      default = Palette.semantic("#3b82f6", :green)
+      muted = Palette.semantic("#3b82f6", :green, chroma_factor: 0.5)
+      flat = Palette.semantic("#3b82f6", :green, chroma_factor: 0.0)
+
+      {:ok, default_oklch} = Color.convert(default, Color.Oklch)
+      {:ok, muted_oklch} = Color.convert(muted, Color.Oklch)
+      {:ok, flat_oklch} = Color.convert(flat, Color.Oklch)
+
+      assert muted_oklch.c < default_oklch.c
+      assert flat_oklch.c < muted_oklch.c
+      assert flat_oklch.c < 0.02
+    end
+
+    test ":lightness option overrides seed's L" do
+      dark = Palette.semantic("#3b82f6", :green, lightness: 0.3)
+      light = Palette.semantic("#3b82f6", :green, lightness: 0.8)
+
+      {:ok, dark_oklch} = Color.convert(dark, Color.Oklch)
+      {:ok, light_oklch} = Color.convert(light, Color.Oklch)
+
+      assert dark_oklch.l < light_oklch.l
+      assert_in_delta dark_oklch.l, 0.3, 0.05
+      assert_in_delta light_oklch.l, 0.8, 0.05
+    end
+
+    test "result is always in the target gamut" do
+      for category <- [:red, :green, :blue, :success, :danger, :warning, :info, :neutral] do
+        color = Palette.semantic("#3b82f6", category)
+
+        assert Color.Gamut.in_gamut?(color, :SRGB),
+               "category #{inspect(category)} produced out-of-gamut colour"
+      end
+    end
+
+    test "works with any seed input Color.new/1 accepts" do
+      red_from_hex = Palette.semantic("#3b82f6", :red)
+      red_from_named = Palette.semantic("rebeccapurple", :red)
+      {:ok, srgb} = Color.new("#3b82f6")
+      red_from_struct = Palette.semantic(srgb, :red)
+
+      for c <- [red_from_hex, red_from_named, red_from_struct] do
+        {:ok, oklch} = Color.convert(c, Color.Oklch)
+        assert oklch.h >= 0.0 and oklch.h <= 45.0
+      end
+    end
+
+    test "composes cleanly into a Tonal palette" do
+      # The canonical workflow: semantic/3 to get a seed, then tonal/2
+      # to generate the full scale for that semantic role.
+      danger_seed = Palette.semantic("#3b82f6", :danger)
+      danger_scale = Palette.tonal(danger_seed, name: "danger")
+
+      assert danger_scale.name == "danger"
+      assert Map.keys(danger_scale.stops) |> Enum.count() == 11
+      assert Palette.in_gamut?(danger_scale, :SRGB)
+    end
+
+    test "unknown category raises" do
+      assert_raise ArgumentError, ~r/Unknown semantic category/, fn ->
+        Palette.semantic("#3b82f6", :fictional)
+      end
+    end
+  end
+
+  describe "semantic_categories/0" do
+    test "lists all supported categories" do
+      cats = Palette.semantic_categories()
+
+      for c <- [:red, :orange, :yellow, :green, :teal, :blue, :purple, :pink] do
+        assert c in cats
+      end
+
+      for c <- [:success, :danger, :error, :destructive, :warning, :info, :neutral] do
+        assert c in cats
+      end
+    end
+
+    test "returned list is sorted and unique" do
+      cats = Palette.semantic_categories()
+      assert cats == Enum.sort(cats)
+      assert cats == Enum.uniq(cats)
+    end
+  end
+
   describe "in_gamut? / gamut_report" do
     test "Tonal palette generated against sRGB is fully inside sRGB" do
       palette = Tonal.new("#3b82f6")

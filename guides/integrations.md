@@ -9,6 +9,7 @@ Everything the visualizer does is reachable programmatically. The visualizer is 
 | Task | API |
 |---|---|
 | Generate a palette | `Color.Palette.tonal/2`, `theme/2`, `contrast/2`, `contrast_scale/2` |
+| Generate semantic / categorical colours (success, danger, red, blue…) from a brand seed | `Color.Palette.semantic/3` |
 | Export as CSS custom properties | `Color.Palette.Tonal.to_css/2`, `Color.Palette.ContrastScale.to_css/2` |
 | Export as Tailwind config | `Color.Palette.Tonal.to_tailwind/2`, `Color.Palette.ContrastScale.to_tailwind/2` |
 | Export as W3C DTCG tokens | `Color.Palette.Tonal.to_tokens/2`, `Color.Palette.Theme.to_tokens/2`, `Color.Palette.Contrast.to_tokens/2`, `Color.Palette.ContrastScale.to_tokens/2` |
@@ -232,6 +233,44 @@ sRGB_triangle = Color.Gamut.Diagram.triangle(:SRGB, :uv)
 
 {:ok, blue_point} = Color.Gamut.Diagram.chromaticity("#3b82f6", :uv)
 ```
+
+## Semantic colours from a brand seed
+
+Most design systems need a success green, a danger red, a warning amber, and an info blue — but every brand wants these to feel like siblings of the brand colour, not generic `#ff0000` / `#00ff00` stand-ins. `Color.Palette.semantic/3` synthesises them from one seed by rotating the hue to a canonical category centre while preserving the seed's lightness and chroma.
+
+```elixir
+seed = "#3b82f6"
+
+Color.Palette.semantic(seed, :danger)   #=> #e24b49 — red at the seed's weight
+Color.Palette.semantic(seed, :success)  #=> #18a332 — green at the seed's weight
+Color.Palette.semantic(seed, :warning)  #=> #cf6500 — orange at the seed's weight
+Color.Palette.semantic(seed, :info)     #=> #0089ef — blue (close to seed's hue)
+Color.Palette.semantic(seed, :neutral)  #=> #808893 — a blue-tinted grey
+```
+
+All five answers have the same perceptual lightness and a comparable chroma to the original brand seed — they feel like part of one coherent palette because they *are*. A pastel brand gets pastel semantics; a bold brand gets bold semantics.
+
+Categories accepted are the semantic aliases `:success` / `:positive`, `:danger` / `:error` / `:destructive`, `:warning` / `:caution`, `:info` / `:information`, `:neutral`; or the raw hue names `:red`, `:orange`, `:yellow`, `:green`, `:teal`, `:blue`, `:purple`, `:pink`. `Color.Palette.semantic_categories/0` returns the full list at runtime.
+
+The canonical workflow is to feed the semantic colour into any of the palette generators to produce a full scale:
+
+```elixir
+seed = "#3b82f6"
+
+brand = Color.Palette.tonal(seed, name: "brand")
+danger = Color.Palette.tonal(Color.Palette.semantic(seed, :danger), name: "danger")
+success = Color.Palette.tonal(Color.Palette.semantic(seed, :success), name: "success")
+warning = Color.Palette.tonal(Color.Palette.semantic(seed, :warning), name: "warning")
+
+# All four scales now share the brand's "weight" — same chroma
+# family, same lightness curve, different hues.
+```
+
+Options:
+
+* `:chroma_factor` multiplies the seed's chroma before the output is built (default `1.0`). Use `0.5` for muted semantics on a maximal-contrast design; `0.0` produces a grey at the target hue.
+* `:lightness` overrides the Oklch lightness (default: seed's). Useful when the seed is very dark or very light and you want the semantic colour at a more typical body-text lightness like `0.6`.
+* `:gamut` chooses the target gamut to map into (default `:SRGB`).
 
 ## Gamut audits — CI checks for palette accessibility
 
