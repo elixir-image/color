@@ -79,6 +79,49 @@ defmodule Color.RGB.WorkingSpace do
     @rgb_working_space
   end
 
+  @doc """
+  Returns the `(x, y)` chromaticities of a working space's three
+  primaries plus its illuminant atom.
+
+  ### Arguments
+
+  * `working_space` is an atom identifying the working space,
+    for example `:SRGB`, `:P3_D65`, `:Rec2020`.
+
+  ### Returns
+
+  * `%{red: {x, y}, green: {x, y}, blue: {x, y}, illuminant: atom}`.
+
+  ### Examples
+
+      iex> p = Color.RGB.WorkingSpace.primaries(:SRGB)
+      iex> p.red
+      {0.64, 0.33}
+
+      iex> Color.RGB.WorkingSpace.primaries(:P3_D65).illuminant
+      :D65
+
+  """
+  @spec primaries(atom()) :: %{
+          red: {float(), float()},
+          green: {float(), float()},
+          blue: {float(), float()},
+          illuminant: atom()
+        }
+  def primaries(working_space) when is_atom(working_space) do
+    data = Map.fetch!(@rgb_working_space, working_space)
+    [xr, yr, _] = Map.fetch!(data, :ρ)
+    [xg, yg, _] = Map.fetch!(data, :γ)
+    [xb, yb, _] = Map.fetch!(data, :β)
+
+    %{
+      red: {xr, yr},
+      green: {xg, yg},
+      blue: {xb, yb},
+      illuminant: data.illuminant
+    }
+  end
+
   # CSS Color Module 4 working-space names → our internal atoms.
   @css_names %{
     "srgb" => :SRGB,

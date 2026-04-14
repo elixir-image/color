@@ -6,7 +6,11 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
-* `Color.Palette.ContrastScale` — a fourth palette algorithm, inspired by Matt Ström-Awn's [*Generating colour palettes with math*](https://mattstromawn.com/writing/generating-color-palettes/).
+* `Color.Gamut.Diagram` — pure-data module for chromaticity diagrams.
+
+* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram.
+
+* `Color.Palette.ContrastScale` — a fourth palette algorithm, inspired by Matt Ström-Awn's [Generating colour palettes with math](https://mattstromawn.com/writing/generating-color-palettes/).
 
 * `Color.DesignTokens` — encode and decode W3C [Design Tokens Community Group](https://www.designtokens.org/tr/2025.10/color/) color tokens (2025.10 draft).
 

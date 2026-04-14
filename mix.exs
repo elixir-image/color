@@ -131,6 +131,7 @@ defmodule Color.MixProject do
       ],
       Visualizer: ~r/Color\.Palette\.Visualizer/,
       "Design Tokens": [Color.DesignTokens],
+      "Gamut Diagrams": [Color.Gamut.Diagram],
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [

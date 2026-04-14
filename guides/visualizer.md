@@ -111,6 +111,27 @@ Below the swatches: a **matrix**. One row per generated stop, one column per com
 * `background` — the colour to measure contrast against. Default `white`; try `black` for dark-mode planning.
 * `metric` — `wcag` (default) or `apca`.
 
+### Gamut — chromaticity diagram
+
+![Gamut view](images/gamut.png)
+
+**URL.** `/gamut?projection=uv&gamut[]=SRGB&gamut[]=P3_D65&planckian=1&overlay_seed=1`
+
+**What it shows.** The classic **chromaticity horseshoe** — the boundary of human-visible colour — with coloured triangles overlaid for each RGB working space. Every triangle's white point is marked with a filled circle in the same colour. Optionally, the **Planckian locus** (the curve of blackbody chromaticities from 1500 K to 20 000 K) is drawn as a dashed gold line with labelled CCT annotations at 2000, 2700, 4000, 6500, and 10 000 K. The current seed colour is plotted as a white-bordered dot labelled "seed", so you can see which of the working spaces actually contain it.
+
+The legend on the right lists every rendered triangle with its white-point coordinates, and the Planckian and seed overlays when they're active.
+
+**Options.**
+* `projection` — `uv` (CIE 1976 u′v′, default) or `xy` (CIE 1931). u′v′ is perceptually more uniform and what modern references use; xy is the textbook default.
+* `gamut[]` — zero or more of `SRGB`, `P3_D65`, `Rec2020`, `Adobe`, `ProPhoto`. Each renders as an overlaid triangle.
+* `planckian` — checkbox, toggles the Planckian locus.
+* `overlay_seed` — checkbox, plots the seed as a dot on the diagram.
+* `seed` — the colour whose chromaticity to plot.
+
+The xy projection looks like this — note how much more green and how much less blue there is compared to u′v′:
+
+![Gamut view in CIE 1931 xy](images/gamut-xy.png)
+
 ### Scale — contrast-constrained tonal scale
 
 ![Scale view](images/scale.png)

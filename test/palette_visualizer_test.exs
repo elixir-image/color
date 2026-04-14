@@ -183,6 +183,79 @@ defmodule Color.Palette.VisualizerTest do
     end
   end
 
+  describe "gamut view" do
+    test "renders default with u'v' projection" do
+      conn = conn(:get, "/gamut") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "Chromaticity diagram"
+      assert conn.resp_body =~ "CIE 1976 u"
+      assert conn.resp_body =~ "Visible spectrum"
+      # Default gamuts: sRGB and P3 visible in legend.
+      assert conn.resp_body =~ "sRGB"
+      assert conn.resp_body =~ "Display P3"
+    end
+
+    test "honours projection=xy" do
+      conn = conn(:get, "/gamut?projection=xy") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert conn.resp_body =~ "CIE 1931"
+    end
+
+    # The form labels always contain "sRGB", "Display P3", etc., so
+    # tests look for each space's outline colour in the legend /
+    # SVG: only rendered triangles carry those hex codes.
+    @srgb_colour "#60a5fa"
+    @p3_colour "#22c55e"
+    @rec2020_colour "#f59e0b"
+
+    test "honours gamut[] checkboxes" do
+      conn =
+        conn(:get, "/gamut?gamut[]=SRGB&gamut[]=Rec2020&submitted=1")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.resp_body =~ "border:1.5px solid #{@srgb_colour}"
+      assert conn.resp_body =~ "border:1.5px solid #{@rec2020_colour}"
+      refute conn.resp_body =~ "border:1.5px solid #{@p3_colour}"
+    end
+
+    test "all-unchecked submit renders no triangles" do
+      conn =
+        conn(:get, "/gamut?submitted=1")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      refute conn.resp_body =~ "border:1.5px solid #{@srgb_colour}"
+      refute conn.resp_body =~ "border:1.5px solid #{@p3_colour}"
+    end
+
+    test "planckian locus toggle" do
+      off = conn(:get, "/gamut?submitted=1") |> Color.Palette.Visualizer.call(@opts)
+      on = conn(:get, "/gamut?planckian=1&submitted=1") |> Color.Palette.Visualizer.call(@opts)
+
+      # The SVG polyline with a dashed stroke only renders when the
+      # Planckian locus is on.
+      refute off.resp_body =~ "stroke-dasharray=\"3,3\""
+      assert on.resp_body =~ "stroke-dasharray=\"3,3\""
+    end
+
+    test "overlay_seed plots a seed dot with label" do
+      conn =
+        conn(:get, "/gamut?overlay_seed=1&seed=%23ff0000&submitted=1")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.resp_body =~ ~s(>seed</text>)
+      assert conn.resp_body =~ "Seed:"
+    end
+
+    test "emits an inline SVG" do
+      conn = conn(:get, "/gamut") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.resp_body =~ ~s(<svg viewBox=)
+      assert conn.resp_body =~ ~s(class="vz-gamut")
+    end
+  end
+
   describe "scale view (contrast-constrained tonal)" do
     test "renders default scale" do
       conn = conn(:get, "/scale") |> Color.Palette.Visualizer.call(@opts)

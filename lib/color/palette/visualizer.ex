@@ -65,6 +65,7 @@ defmodule Color.Palette.Visualizer do
     alias Color.Palette.Visualizer.Assets
     alias Color.Palette.Visualizer.ContrastScaleView
     alias Color.Palette.Visualizer.ContrastView
+    alias Color.Palette.Visualizer.GamutView
     alias Color.Palette.Visualizer.ThemeView
     alias Color.Palette.Visualizer.TonalView
 
@@ -94,6 +95,11 @@ defmodule Color.Palette.Visualizer do
     get "/scale" do
       params = parse_params(conn.params, :scale)
       html(conn, ContrastScaleView.render(params, base_path(conn)))
+    end
+
+    get "/gamut" do
+      params = parse_params(conn.params, :gamut)
+      html(conn, GamutView.render(params, base_path(conn)))
     end
 
     get "/assets/style.css" do
@@ -161,6 +167,47 @@ defmodule Color.Palette.Visualizer do
         hue_drift: truthy?(Map.get(params, "hue_drift"))
       }
     end
+
+    # The gamut form has two cases to handle:
+    #
+    # - First render (or fresh link): no `gamut[]` params at all.
+    #   Fall back to the default set (sRGB + P3).
+    # - Any submit from the form: `submitted` hidden field is set.
+    #   Use whatever checkboxes came through, even the empty list
+    #   (the user may have explicitly unchecked everything).
+    defp parse_params(params, :gamut) do
+      gamuts =
+        case Map.get(params, "gamut") do
+          list when is_list(list) -> Enum.map(list, &gamut_atom/1) |> Enum.reject(&is_nil/1)
+          _ -> nil
+        end
+
+      gamuts =
+        cond do
+          gamuts == nil and Map.has_key?(params, "submitted") -> []
+          gamuts == nil -> [:SRGB, :P3_D65]
+          true -> gamuts
+        end
+
+      %{
+        seed: resolve_seed(params, "#3b82f6"),
+        projection: atom_default(Map.get(params, "projection"), [:xy, :uv], :uv),
+        gamuts: gamuts,
+        planckian: truthy?(Map.get(params, "planckian")),
+        overlay_seed: truthy?(Map.get(params, "overlay_seed"))
+      }
+    end
+
+    @gamut_atoms %{
+      "SRGB" => :SRGB,
+      "P3_D65" => :P3_D65,
+      "Rec2020" => :Rec2020,
+      "Adobe" => :Adobe,
+      "ProPhoto" => :ProPhoto
+    }
+
+    defp gamut_atom(name) when is_binary(name), do: Map.get(@gamut_atoms, name)
+    defp gamut_atom(_), do: nil
 
     defp resolve_bg(params, default) do
       text = Map.get(params, "background") |> nilify_blank()

@@ -286,6 +286,59 @@ defmodule Color.Palette.Visualizer.Assets do
     .vz-exports { grid-template-columns: 1fr; }
   }
 
+  /* --- Gamut diagram --- */
+  .vz-gamut-wrapper {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 20px;
+    align-items: start;
+  }
+  svg.vz-gamut {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: var(--vz-surface);
+    border: 1px solid var(--vz-border);
+    border-radius: 10px;
+  }
+  .vz-gamut-legend {
+    background: var(--vz-surface);
+    border: 1px solid var(--vz-border);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .vz-gamut-legend h3 {
+    margin: 0 0 8px 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--vz-text-dim);
+  }
+  .vz-gamut-legend ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .vz-gamut-legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .vz-legend-swatch {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 900px) {
+    .vz-gamut-wrapper { grid-template-columns: 1fr; }
+  }
+
   .vz-footer {
     margin-top: 40px;
     padding: 16px 0;

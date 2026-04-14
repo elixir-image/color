@@ -56,7 +56,8 @@ defmodule Color.Palette.Visualizer.Render do
       {"tonal", "Tonal"},
       {"theme", "Theme"},
       {"contrast", "Contrast"},
-      {"scale", "Scale"}
+      {"scale", "Scale"},
+      {"gamut", "Gamut"}
     ]
 
     seed_hex = resolve_hex(seed, "#3b82f6")
