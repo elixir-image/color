@@ -36,6 +36,15 @@ defmodule Color.Palette.VisualizerTest do
       assert ["public, max-age=31536000, immutable"] = get_resp_header(conn, "cache-control")
       assert conn.resp_body =~ ".vz-swatch"
     end
+
+    test "serves the logo PNG" do
+      conn = conn(:get, "/assets/logo.png") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      assert ["image/png" <> _] = get_resp_header(conn, "content-type")
+      # PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+      assert <<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A, _::binary>> = conn.resp_body
+    end
   end
 
   describe "tonal view" do

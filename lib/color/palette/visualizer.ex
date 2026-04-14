@@ -103,6 +103,13 @@ defmodule Color.Palette.Visualizer do
       |> Plug.Conn.send_resp(200, Assets.css())
     end
 
+    get "/assets/logo.png" do
+      conn
+      |> Plug.Conn.put_resp_content_type("image/png")
+      |> Plug.Conn.put_resp_header("cache-control", "public, max-age=31536000, immutable")
+      |> Plug.Conn.send_resp(200, Assets.logo_png())
+    end
+
     match _ do
       send_resp(conn, 404, "Not found")
     end

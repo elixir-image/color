@@ -63,7 +63,12 @@ defmodule Color.Palette.Visualizer.Render do
 
     [
       "<header class=\"vz-header\">",
-      "<h1>Color.Palette.Visualizer</h1>",
+      "<a class=\"vz-brand\" href=\"",
+      escape(base),
+      "/\"><img src=\"",
+      escape(base),
+      "/assets/logo.png\" alt=\"\" class=\"vz-logo\" width=\"32\" height=\"32\">",
+      "<h1>Color.Palette.Visualizer</h1></a>",
       "<nav class=\"vz-tabs\">",
       Enum.map(tabs, fn {path, label} ->
         cls = if path == active, do: "active", else: ""

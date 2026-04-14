@@ -1,9 +1,27 @@
 defmodule Color.Palette.Visualizer.Assets do
   @moduledoc false
 
-  # Inlined CSS for the visualizer. Compiled into the module as a
-  # binary so the library doesn't need an asset pipeline and the
-  # CSS is never out of sync with the rendering code.
+  # Inlined assets for the visualizer. The CSS is written inline;
+  # the logo PNG is read at compile time and cached as a module
+  # attribute so the visualizer works regardless of the runtime
+  # working directory.
+
+  # Compile-time path to logo.png at the project root. __ENV__.file
+  # at compile time gives the absolute path to this source file, so
+  # we walk up to the project root from there rather than depending
+  # on the caller's working directory.
+  @logo_path __ENV__.file
+             |> Path.dirname()
+             |> Path.join("../../../../logo.png")
+             |> Path.expand()
+  @external_resource @logo_path
+  @logo (case File.read(@logo_path) do
+           {:ok, bytes} -> bytes
+           {:error, _} -> <<>>
+         end)
+
+  @spec logo_png() :: binary()
+  def logo_png, do: @logo
 
   @css """
   :root {
@@ -54,6 +72,21 @@ defmodule Color.Palette.Visualizer.Assets do
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.01em;
+  }
+
+  a.vz-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--vz-text);
+  }
+  a.vz-brand:hover { text-decoration: none; }
+
+  img.vz-logo {
+    display: block;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
   }
 
   nav.vz-tabs { display: flex; gap: 4px; }
