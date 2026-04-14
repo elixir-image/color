@@ -125,8 +125,11 @@ The legend on the right lists every rendered triangle with its white-point coord
 * `projection` — `uv` (CIE 1976 u′v′, default) or `xy` (CIE 1931). u′v′ is perceptually more uniform and what modern references use; xy is the textbook default.
 * `gamut[]` — zero or more of `SRGB`, `P3_D65`, `Rec2020`, `Adobe`, `ProPhoto`. Each renders as an overlaid triangle.
 * `planckian` — checkbox, toggles the Planckian locus.
-* `overlay_seed` — checkbox, plots the seed as a dot on the diagram.
+* `overlay_seed` — checkbox, plots the seed as a large white-bordered dot.
+* `overlay_palette` — checkbox, plots every stop of the tonal palette generated from the seed as a chain of coloured dots connected by a thin track. Each dot is hoverable for its stop label and hex. Useful for verifying that the entire palette lives inside a target gamut.
 * `seed` — the colour whose chromaticity to plot.
+
+Below the diagram there's an **SVG export** block containing the raw SVG markup — copy it straight into a design doc, blog post, or slide deck.
 
 The xy projection looks like this — note how much more green and how much less blue there is compared to u′v′:
 

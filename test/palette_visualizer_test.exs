@@ -248,6 +248,26 @@ defmodule Color.Palette.VisualizerTest do
       assert conn.resp_body =~ "Seed:"
     end
 
+    test "overlay_palette plots every tonal stop as a hoverable circle" do
+      conn =
+        conn(:get, "/gamut?overlay_palette=1&seed=%233b82f6&submitted=1")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      # Polyline connecting the stops + a <title> per circle for
+      # browser tooltips. The label + hex of the 500 stop should
+      # appear in one of the <title>s.
+      assert conn.resp_body =~ ~s(<polyline points=)
+      assert conn.resp_body =~ ~r/<title>500: #[0-9a-f]{6}<\/title>/
+      assert conn.resp_body =~ "Tonal palette"
+    end
+
+    test "overlay_palette off (default) — no track rendered" do
+      conn = conn(:get, "/gamut?submitted=1") |> Color.Palette.Visualizer.call(@opts)
+
+      refute conn.resp_body =~ ~r/<title>500: #[0-9a-f]{6}<\/title>/
+      refute conn.resp_body =~ "Tonal palette"
+    end
+
     test "emits an inline SVG" do
       conn = conn(:get, "/gamut") |> Color.Palette.Visualizer.call(@opts)
 

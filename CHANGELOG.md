@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format is based on 
 
 * `Color.Gamut.Diagram` — pure-data module for chromaticity diagrams.
 
-* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram.
+* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram. Supports both CIE 1976 u′v′ (default) and CIE 1931 xy projections, toggleable overlays for sRGB / Display P3 / Rec. 2020 / Adobe RGB / ProPhoto RGB, an optional Planckian locus with annotated CCT points, an optional seed-chromaticity dot, and an optional tonal-palette overlay that plots every stop of the seed's tonal scale as a chain of coloured dots with hoverable labels so users can see that their whole palette sits inside a target gamut. A raw SVG export block at the bottom makes it easy to paste the diagram into a design doc.
 
 * `Color.Palette.ContrastScale` — a fourth palette algorithm, inspired by Matt Ström-Awn's [Generating colour palettes with math](https://mattstromawn.com/writing/generating-color-palettes/).
 

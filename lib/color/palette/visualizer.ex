@@ -194,7 +194,8 @@ defmodule Color.Palette.Visualizer do
         projection: atom_default(Map.get(params, "projection"), [:xy, :uv], :uv),
         gamuts: gamuts,
         planckian: truthy?(Map.get(params, "planckian")),
-        overlay_seed: truthy?(Map.get(params, "overlay_seed"))
+        overlay_seed: truthy?(Map.get(params, "overlay_seed")),
+        overlay_palette: truthy?(Map.get(params, "overlay_palette"))
       }
     end
 

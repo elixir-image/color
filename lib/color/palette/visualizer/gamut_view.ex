@@ -38,11 +38,12 @@ defmodule Color.Palette.Visualizer.GamutView do
     enabled = Map.get(params, :gamuts, default_gamuts())
     show_planck = Map.get(params, :planckian, true)
     overlay_seed = Map.get(params, :overlay_seed, true)
+    overlay_palette = Map.get(params, :overlay_palette, false)
     seed = Map.get(params, :seed, "#3b82f6")
 
     body =
       try do
-        success_body(projection, enabled, show_planck, overlay_seed, seed)
+        success_body(projection, enabled, show_planck, overlay_seed, overlay_palette, seed)
       rescue
         e ->
           ["<div class=\"vz-error\">", Render.escape(Exception.message(e)), "</div>"]
@@ -54,7 +55,7 @@ defmodule Color.Palette.Visualizer.GamutView do
       seed: seed,
       body: body,
       base: base,
-      extra_fields: extra_fields(projection, enabled, show_planck, overlay_seed)
+      extra_fields: extra_fields(projection, enabled, show_planck, overlay_seed, overlay_palette)
     )
   end
 
@@ -62,7 +63,7 @@ defmodule Color.Palette.Visualizer.GamutView do
     for {atom, _label, _colour, default?} <- @working_spaces, default?, do: atom
   end
 
-  defp extra_fields(projection, enabled, show_planck, overlay_seed) do
+  defp extra_fields(projection, enabled, show_planck, overlay_seed, overlay_palette) do
     [
       "<label>proj <select name=\"projection\">",
       option("uv", "u′v′ (CIE 1976)", projection == :uv),
@@ -90,6 +91,9 @@ defmodule Color.Palette.Visualizer.GamutView do
       "<label><input type=\"checkbox\" name=\"overlay_seed\" value=\"1\"",
       if(overlay_seed, do: " checked", else: ""),
       "> Plot seed</label>",
+      "<label><input type=\"checkbox\" name=\"overlay_palette\" value=\"1\"",
+      if(overlay_palette, do: " checked", else: ""),
+      "> Plot tonal palette</label>",
       # Hidden marker so the server can tell "all boxes unchecked"
       # apart from "first render, no params at all". Without this
       # an empty submit would fall back to the defaults.
@@ -109,7 +113,7 @@ defmodule Color.Palette.Visualizer.GamutView do
     ]
   end
 
-  defp success_body(projection, enabled, show_planck, overlay_seed, seed) do
+  defp success_body(projection, enabled, show_planck, overlay_seed, overlay_palette, seed) do
     locus = Diagram.spectral_locus(projection)
 
     planckian =
@@ -125,10 +129,15 @@ defmodule Color.Palette.Visualizer.GamutView do
         nil
       end
 
+    palette_track =
+      if overlay_palette, do: build_palette_track(seed, projection), else: []
+
     triangles =
       for {atom, label, colour, _} <- @working_spaces, atom in enabled do
         {atom, label, colour, Diagram.triangle(atom, projection)}
       end
+
+    svg_iodata = svg(projection, locus, triangles, planckian, palette_track, seed_point, seed)
 
     [
       "<section class=\"vz-section\">",
@@ -136,11 +145,56 @@ defmodule Color.Palette.Visualizer.GamutView do
       projection_label(projection),
       ")</h2>",
       "<div class=\"vz-gamut-wrapper\">",
-      svg(projection, locus, triangles, planckian, seed_point, seed),
-      legend(triangles, show_planck, overlay_seed, seed),
+      svg_iodata,
+      legend(triangles, show_planck, overlay_seed, overlay_palette, seed),
+      "</div>",
+      "</section>",
+      svg_export(svg_iodata)
+    ]
+  end
+
+  # Exports the rendered SVG as a copy-pasteable block, mirroring
+  # the CSS / Tailwind / DTCG export blocks on the other views.
+  defp svg_export(svg_iodata) do
+    svg_text = svg_iodata |> IO.iodata_to_binary()
+
+    [
+      "<section class=\"vz-section\">",
+      "<h2>SVG export</h2>",
+      "<div class=\"vz-export\">",
+      Render.escape(svg_text),
       "</div>",
       "</section>"
     ]
+  end
+
+  # For a given seed, generate a Tonal palette and return each stop's
+  # chromaticity + the stop's hex colour, in label order. Returns [] if
+  # the palette can't be built (unparseable seed, etc.).
+  defp build_palette_track(seed, projection) do
+    palette = Color.Palette.Tonal.new(seed)
+
+    palette
+    |> Color.Palette.Tonal.labels()
+    |> Enum.map(fn label ->
+      color = Map.fetch!(palette.stops, label)
+
+      case Diagram.chromaticity(color, projection) do
+        {:ok, point} ->
+          %{
+            label: label,
+            hex: Color.to_hex(color),
+            point: point,
+            is_seed: label == palette.seed_stop
+          }
+
+        _ ->
+          nil
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  rescue
+    _ -> []
   end
 
   defp projection_label(:xy), do: "CIE 1931 x, y"
@@ -148,7 +202,7 @@ defmodule Color.Palette.Visualizer.GamutView do
 
   # ---- SVG construction --------------------------------------------------
 
-  defp svg(projection, locus, triangles, planckian, seed_point, seed) do
+  defp svg(projection, locus, triangles, planckian, palette_track, seed_point, seed) do
     extent = extent_for(projection)
     transform = &to_pixel(&1, projection, extent)
 
@@ -165,6 +219,7 @@ defmodule Color.Palette.Visualizer.GamutView do
         triangle_svg(tri, colour, transform)
       end),
       planckian_svg(planckian, transform),
+      palette_svg(palette_track, transform),
       seed_svg(seed_point, seed, transform),
       "</svg>"
     ]
@@ -277,6 +332,57 @@ defmodule Color.Palette.Visualizer.GamutView do
       d,
       "\" fill=\"none\" stroke=\"#fbbf24\" stroke-width=\"1.2\" stroke-dasharray=\"3,3\" />",
       annotations
+    ]
+  end
+
+  # Palette track: a thin polyline connecting every stop's
+  # chromaticity, plus a filled circle per stop coloured with the
+  # stop's own hex. A <title> per circle gives a browser tooltip
+  # with the stop label and hex so hovering the SVG is useful.
+  defp palette_svg([], _transform), do: []
+
+  defp palette_svg(track, transform) do
+    # Polyline through all stops first, under the circles.
+    polyline_points =
+      track
+      |> Enum.map(&transform.(&1.point))
+      |> Enum.map(fn {px, py} -> fmt(px) <> "," <> fmt(py) end)
+      |> Enum.join(" ")
+
+    circles =
+      Enum.map(track, fn %{label: label, hex: hex, point: point, is_seed: is_seed?} ->
+        {px, py} = transform.(point)
+
+        # Slightly larger radius for the seed stop so it's easy to
+        # pick out within the track; a thin white outline so every
+        # circle reads against any triangle's fill.
+        r = if is_seed?, do: "5", else: "3.5"
+        stroke_width = if is_seed?, do: "1.5", else: "1"
+
+        [
+          "<circle cx=\"",
+          fmt(px),
+          "\" cy=\"",
+          fmt(py),
+          "\" r=\"",
+          r,
+          "\" fill=\"",
+          hex,
+          "\" stroke=\"#fff\" stroke-opacity=\"0.7\" stroke-width=\"",
+          stroke_width,
+          "\"><title>",
+          to_string(label),
+          ": ",
+          hex,
+          "</title></circle>"
+        ]
+      end)
+
+    [
+      "<polyline points=\"",
+      polyline_points,
+      "\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.35\" stroke-width=\"1\" />",
+      circles
     ]
   end
 
@@ -454,7 +560,7 @@ defmodule Color.Palette.Visualizer.GamutView do
 
   # ---- Legend ------------------------------------------------------------
 
-  defp legend(triangles, show_planck, overlay_seed, seed) do
+  defp legend(triangles, show_planck, overlay_seed, overlay_palette, seed) do
     [
       "<div class=\"vz-gamut-legend\">",
       "<h3>Legend</h3>",
@@ -497,6 +603,16 @@ defmodule Color.Palette.Visualizer.GamutView do
           ";border:2px solid #fff\"></span>Seed: ",
           Render.escape(seed),
           "</li>"
+        ]
+      else
+        []
+      end,
+      if overlay_palette do
+        [
+          "<li><span class=\"vz-legend-swatch\" ",
+          "style=\"background:linear-gradient(90deg,#e0f2fe,#3b82f6,#0c1e4a);",
+          "border:1px solid rgba(255,255,255,0.35)\"></span>",
+          "Tonal palette (hover a dot for label / hex)</li>"
         ]
       else
         []
