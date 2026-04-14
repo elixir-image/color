@@ -73,8 +73,12 @@ defmodule Color.MixProject do
       logo: "logo.jpg",
       extras: [
         "README.md",
+        "guides/palettes.md",
         "LICENSE.md",
         "CHANGELOG.md"
+      ],
+      groups_for_extras: [
+        Guides: ~r{guides/.*\.md}
       ],
       formatters: ["html", "markdown"],
       groups_for_modules: groups_for_modules(),
@@ -116,6 +120,7 @@ defmodule Color.MixProject do
       "Conversion Math": ~r/Color.Conversion/,
       ANSI: [Color.ANSI],
       LED: ~r/Color\.LED/,
+      Palettes: ~r/Color\.Palette/,
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [

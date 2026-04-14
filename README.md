@@ -33,6 +33,8 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 
 * **Color harmonies**. Complementary, analogous, triadic, tetradic, and split-complementary in any cylindrical space (default Oklch).
 
+* **Palette generation**. `Color.Palette.tonal/2` produces Tailwind / Radix style tonal scales in Oklch. `Color.Palette.theme/2` produces Material Design 3 style themes — five coordinated scales from one seed, with Material role tokens. `Color.Palette.contrast/2` produces Adobe Leonardo style contrast-targeted palettes that hit exact WCAG or APCA ratios against a chosen background.
+
 * **Color temperature**. CCT ↔ chromaticity, Planckian locus and CIE daylight locus.
 
 * **CSS Color Module Level 4 / 5**. Full parser and serialiser for hex, named colors, `rgb()/rgba()`, `hsl()/hsla()`, `hwb()`, `lab()`, `lch()`, `oklab()`, `oklch()`, `color(srgb|display-p3|rec2020|…)`, `device-cmyk()`, `color-mix()`, relative color syntax, `none` keyword, and `calc()` expressions.
@@ -119,6 +121,30 @@ Color.Contrast.apca("black", "white")           # 106.04
 {:ok, ramp}   = Color.Mix.gradient("black", "white", 8)
 {:ok, [_a, _b]}    = Color.Harmony.complementary("red")
 {:ok, [_a, _b, _c]} = Color.Harmony.triadic("red")
+```
+
+### Palettes
+
+See the [palette guide](https://hexdocs.pm/color/palettes.html) for background, research, and when to use each algorithm.
+
+Generate design-system palettes from a single seed colour:
+
+```elixir
+# Tailwind / Radix style tonal scale
+scale = Color.Palette.tonal("#3b82f6", name: "blue")
+Map.fetch!(scale.stops, 500) |> Color.to_hex()  # => seed (snapped)
+
+# Material Design 3 style theme — five coordinated scales from one seed
+theme = Color.Palette.theme("#3b82f6")
+{:ok, primary}      = Color.Palette.Theme.role(theme, :primary)
+{:ok, on_primary}   = Color.Palette.Theme.role(theme, :on_primary)
+{:ok, surface_dark} = Color.Palette.Theme.role(theme, :surface, scheme: :dark)
+
+# Adobe Leonardo style contrast-targeted palette
+accessible = Color.Palette.contrast("#3b82f6",
+  background: "white",
+  targets: [3.0, 4.5, 7.0]   # WCAG AA large, AA, AAA
+)
 ```
 
 ### CSS Color 4 / 5
