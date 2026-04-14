@@ -70,7 +70,7 @@ defmodule Color.MixProject do
     [
       source_ref: "v#{@version}",
       main: "readme",
-      logo: "logo.jpg",
+      logo: "logo.png",
       extras: [
         "README.md",
         "guides/palettes.md",
