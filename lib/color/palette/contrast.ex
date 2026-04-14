@@ -183,6 +183,94 @@ defmodule Color.Palette.Contrast do
     end
   end
 
+  @doc """
+  Emits the palette as a W3C [Design Tokens Community Group](https://www.designtokens.org/)
+  color-token group.
+
+  Each reachable stop becomes a DTCG color token keyed by the
+  target contrast value (integer if it rounds to one, otherwise
+  decimal). Unreachable stops are emitted as tokens whose
+  `$value` is `null` with an `$extensions.color.reason` field
+  explaining the exclusion — tools that filter on `$value`
+  presence will skip them cleanly.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Contrast` struct.
+
+  ### Options
+
+  * `:space` is the colour space for emitted stop values. Any
+    module accepted by `Color.convert/2`. Default `Color.Oklch`.
+
+  * `:name` overrides the group name. Defaults to the palette's
+    `:name` field, or `"contrast"` if unset.
+
+  ### Returns
+
+  * A map shaped as `%{"<name>" => %{"<target>" => token, ...}}`.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Contrast.new("#3b82f6", targets: [4.5, 7.0])
+      iex> tokens = Color.Palette.Contrast.to_tokens(palette)
+      iex> tokens["contrast"]["4.5"]["$type"]
+      "color"
+
+  """
+  @spec to_tokens(t(), keyword()) :: map()
+  def to_tokens(%__MODULE__{} = palette, options \\ []) do
+    space = Keyword.get(options, :space, Color.Oklch)
+    name = Keyword.get(options, :name, palette.name || "contrast")
+
+    stop_tokens =
+      Enum.into(palette.stops, %{}, fn stop ->
+        key = format_target(stop.target)
+
+        token =
+          case stop do
+            %{color: :unreachable} ->
+              %{
+                "$type" => "color",
+                "$value" => nil,
+                "$extensions" => %{
+                  "color" => %{
+                    "reason" => "unreachable",
+                    "target" => stop.target,
+                    "detail" =>
+                      "No Oklch lightness produces contrast #{stop.target} against this background"
+                  }
+                }
+              }
+
+            %{color: color, achieved: achieved} ->
+              base = Color.DesignTokens.encode_token(color, space: space)
+              put_achieved(base, achieved, palette.metric)
+          end
+
+        {key, token}
+      end)
+
+    %{name => stop_tokens}
+  end
+
+  defp format_target(t) when is_integer(t), do: Integer.to_string(t)
+
+  defp format_target(t) when is_float(t) do
+    if t == Float.round(t),
+      do: Integer.to_string(trunc(t)),
+      else: :erlang.float_to_binary(t, [:short])
+  end
+
+  defp put_achieved(token, achieved, metric) do
+    ext =
+      token
+      |> Map.get("$extensions", %{})
+      |> Map.put("color", %{"achieved" => achieved, "metric" => Atom.to_string(metric)})
+
+    Map.put(token, "$extensions", ext)
+  end
+
   # ---- search -------------------------------------------------------------
 
   # Binary search over Oklch L for a colour at (h, c, L) whose

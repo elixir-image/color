@@ -64,6 +64,8 @@ Supervisor.start_link(children, strategy: :one_for_one)
 
 All three views share one header: a tab bar, a seed input, any view-specific options (hue-drift toggle for Tonal, scheme picker for Theme, metric and background for Contrast), and a submit button. Pages are fully server-rendered HTML — no JavaScript.
 
+The seed input is actually **two** controls side-by-side: a native `<input type="color">` and a free-text field. Click the swatch to open your OS's colour picker; or type `rebeccapurple`, `oklch(0.7 0.15 180)`, or any other CSS colour syntax in the text field. On submit the server prefers the text field if you changed it (i.e. its value differs from what the picker was initialised to), otherwise it uses the picker's value. The picker pre-fills with the resolved hex of whatever seed is currently in the URL, so `?seed=rebeccapurple` opens the picker on `#663399`.
+
 ### Tonal — one seed, N shades
 
 ![Tonal view](images/tonal.png)
@@ -131,7 +133,7 @@ Everything else — CSS, chrome, default seed — is a straightforward swap insi
 
 ## Export formats
 
-The Tonal view emits two copy-ready blocks below the scale:
+The Tonal view emits three copy-ready blocks below the scale:
 
 ```css
 :root {
@@ -158,7 +160,27 @@ theme: {
 }
 ```
 
-If you pass `?name=brand` as a query param (or set `name:` when calling `Color.Palette.Tonal.new/2` directly), the key in both blocks changes to match.
+And a **Design Tokens** block in W3C [DTCG](https://www.designtokens.org/tr/2025.10/color/) 2025.10 format:
+
+```json
+{
+  "blue": {
+    "500": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "oklch",
+        "components": [0.6231, 0.1881, 259.82],
+        "hex": "#3b82f6"
+      }
+    },
+    ...
+  }
+}
+```
+
+If you pass `?name=brand` as a query param (or set `name:` when calling `Color.Palette.Tonal.new/2` directly), the key in all three blocks changes to match.
+
+The Theme view emits a full DTCG token file with both a `"palette"` group (the five tonal scales) and a `"role"` group (Material 3 role tokens emitted as DTCG aliases pointing at the scales), so tools that resolve aliases get both the raw palette and the semantic vocabulary.
 
 ## Related
 

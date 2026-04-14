@@ -205,6 +205,50 @@ defmodule Color.Palette.Tonal do
   @spec labels(t()) :: [stop_label()]
   def labels(%__MODULE__{options: options}), do: Keyword.fetch!(options, :stops)
 
+  @doc """
+  Emits the palette as a W3C [Design Tokens Community Group](https://www.designtokens.org/)
+  color-token group.
+
+  The result is a nested map ready for `:json.encode/1`. Each
+  stop becomes a DTCG color token keyed by its label.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Tonal` struct.
+
+  ### Options
+
+  * `:space` is the colour space to emit components in. Any
+    module accepted by `Color.convert/2`. Default `Color.Oklch`.
+
+  * `:name` overrides the group name. Defaults to the palette's
+    `:name` field, or `"color"` if unset.
+
+  ### Returns
+
+  * A map shaped as `%{"<name>" => %{"<stop>" => token, ...}}`.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Tonal.new("#3b82f6", name: "blue")
+      iex> tokens = Color.Palette.Tonal.to_tokens(palette)
+      iex> tokens["blue"]["500"]["$type"]
+      "color"
+
+  """
+  @spec to_tokens(t(), keyword()) :: map()
+  def to_tokens(%__MODULE__{} = palette, options \\ []) do
+    space = Keyword.get(options, :space, Color.Oklch)
+    name = Keyword.get(options, :name, palette.name || "color")
+
+    stop_tokens =
+      Enum.into(palette.stops, %{}, fn {label, color} ->
+        {to_string(label), Color.DesignTokens.encode_token(color, space: space)}
+      end)
+
+    %{name => stop_tokens}
+  end
+
   # ---- algorithm helpers --------------------------------------------------
 
   # Position of stop `index` in `[0, 1]` along the light-to-dark

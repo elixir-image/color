@@ -129,6 +129,7 @@ defmodule Color.MixProject do
         Color.Palette.Contrast
       ],
       Visualizer: ~r/Color\.Palette\.Visualizer/,
+      "Design Tokens": [Color.DesignTokens],
       ICC: ~r/Color\.ICC/,
       Exceptions: ~r/Color\.[A-Z]\w*Error$/,
       Helpers: [
@@ -157,6 +158,14 @@ defmodule Color.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:benchee, "~> 1.3", only: [:dev], runtime: false},
       {:stream_data, "~> 1.1", only: [:test], runtime: false}
-    ]
+    ] ++ maybe_json_polyfill()
+  end
+
+  defp maybe_json_polyfill do
+    if Code.ensure_loaded?(:json) do
+      []
+    else
+      [{:json_polyfill, "~> 0.2 or ~> 1.0"}]
+    end
   end
 end

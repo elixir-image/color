@@ -193,6 +193,48 @@ css = """
 
 Changing `brand` regenerates the entire theme. Swap it to `"#ec4899"` and you have a pink app; swap it to `"#059669"` and you have a green app; the role structure and contrast relationships are unchanged.
 
+## Design tokens (W3C DTCG)
+
+All three palette types export to the W3C [Design Tokens Community Group](https://www.designtokens.org/) color format (2025.10 draft), so palettes can be consumed by Style Dictionary, Figma, Penpot, and any other tool that speaks DTCG.
+
+```elixir
+palette = Color.Palette.tonal("#3b82f6", name: "blue")
+
+tokens = Color.Palette.Tonal.to_tokens(palette)
+# => %{
+#      "blue" => %{
+#        "500" => %{"$type" => "color", "$value" => %{"colorSpace" => "oklch", ...}},
+#        ...
+#      }
+#    }
+
+json = :json.encode(tokens) |> IO.iodata_to_binary()
+File.write!("tokens.json", json)
+```
+
+Themes export the five sub-palettes under `"palette"` plus Material 3 role tokens as **DTCG aliases** pointing at the underlying stops — tools that resolve aliases get both the raw palette and the semantic role vocabulary:
+
+```elixir
+theme = Color.Palette.theme("#3b82f6")
+tokens = Color.Palette.Theme.to_tokens(theme, scheme: :light)
+
+tokens["palette"]["primary"]["40"]
+# => %{"$type" => "color", "$value" => %{"colorSpace" => "oklch", ...}}
+
+tokens["role"]["primary"]
+# => %{"$type" => "color", "$value" => "{palette.primary.40}"}
+```
+
+Contrast palettes emit one token per target. Unreachable stops are preserved with a `null` `$value` and an `$extensions.color.reason` field, so consumers can distinguish "excluded by filter" from "mathematically impossible".
+
+The `Color.DesignTokens` module handles the low-level encode/decode for individual colours across all 14 DTCG-supported colour spaces — see its docs for the full list.
+
+**Default encoding space is Oklch** (richest information, no gamut loss), with a `"hex"` fallback always present for tools that don't yet grok Oklab / Oklch. Override via the `:space` option to `to_tokens/2` for narrower toolchains.
+
+**Alias resolution is out of scope for v1** — the decoder returns `:alias_not_resolved` if you hand it a `"{palette.blue.500}"` string. Resolve aliases in the caller where you have the full token tree.
+
+**Modes** (DTCG's light/dark bundling) are not yet emitted. For now, call `Theme.to_tokens/2` with `scheme: :light` and `scheme: :dark` and save two files.
+
 ## Aside: the library's own logo
 
 ![Color library logo](images/logo-preview.png)

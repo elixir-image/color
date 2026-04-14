@@ -117,7 +117,7 @@ defmodule Color.Palette.Visualizer do
 
     defp parse_params(params, :tonal) do
       %{
-        seed: Map.get(params, "seed") |> blank_default("#3b82f6"),
+        seed: resolve_seed(params, "#3b82f6"),
         hue_drift: truthy?(Map.get(params, "hue_drift")),
         name: Map.get(params, "name") |> blank_default(nil)
       }
@@ -125,18 +125,46 @@ defmodule Color.Palette.Visualizer do
 
     defp parse_params(params, :theme) do
       %{
-        seed: Map.get(params, "seed") |> blank_default("#3b82f6"),
+        seed: resolve_seed(params, "#3b82f6"),
         scheme: atom_default(Map.get(params, "scheme"), [:light, :dark], :light)
       }
     end
 
     defp parse_params(params, :contrast) do
       %{
-        seed: Map.get(params, "seed") |> blank_default("#3b82f6"),
+        seed: resolve_seed(params, "#3b82f6"),
         background: Map.get(params, "background") |> blank_default("white"),
         metric: atom_default(Map.get(params, "metric"), [:wcag, :apca], :wcag)
       }
     end
+
+    # The form has two inputs for `seed`: the native <input
+    # type="color"> (name="seed_picker") and a free-text field
+    # (name="seed"). A hidden "seed_picker_initial" records what
+    # the picker was pre-set to at render time.
+    #
+    # Precedence rule: the text field wins if it is non-empty
+    # AND its value differs from the picker's initial hex. That
+    # way typing `rebeccapurple` overrides the picker, but just
+    # clicking the picker to change colour also works (text
+    # field stayed at the initial hex, so we fall through to the
+    # picker's new value).
+    defp resolve_seed(params, default) do
+      text = Map.get(params, "seed") |> nilify_blank()
+      picker = Map.get(params, "seed_picker") |> nilify_blank()
+      initial = Map.get(params, "seed_picker_initial") |> nilify_blank()
+
+      cond do
+        text != nil and text != initial -> text
+        picker != nil -> picker
+        text != nil -> text
+        true -> default
+      end
+    end
+
+    defp nilify_blank(nil), do: nil
+    defp nilify_blank(""), do: nil
+    defp nilify_blank(value), do: value
 
     defp blank_default(nil, default), do: default
     defp blank_default("", default), do: default

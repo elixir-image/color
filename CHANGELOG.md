@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] — April 14th, 2026
+
+### Added
+
+* `Color.DesignTokens` — encode and decode W3C [Design Tokens Community Group](https://www.designtokens.org/tr/2025.10/color/) color tokens (2025.10 draft).
+
+* `Color.Palette.Tonal.to_tokens/2`, `Color.Palette.Theme.to_tokens/2`, and `Color.Palette.Contrast.to_tokens/2` emit each palette type as a DTCG-compliant token map ready for `:json.encode/1`.
+
+* `Color.Palette.Visualizer` Tonal and Theme views now include a "Design Tokens (W3C DTCG)" export block alongside the existing CSS custom properties and Tailwind config blocks, showing the palette as pretty-printed JSON ready to copy into a `tokens.json` file.
+
+* `Color.Palette.Visualizer` seed input is now a native `<input type="color">` paired with a text input. Clicking the picker opens the OS colour picker; typing a named colour, `oklch(...)`, or any other CSS syntax still works via the text field. On submit the server prefers the text field if it was changed, otherwise uses the picker's value. The picker is pre-initialised to the resolved hex of whatever the current seed is, so `seed=rebeccapurple` opens the picker on `#663399`.
+
 ## [0.5.0] — April 14th, 2026
 
 ### Added

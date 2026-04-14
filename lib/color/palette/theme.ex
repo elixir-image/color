@@ -284,6 +284,83 @@ defmodule Color.Palette.Theme do
   @spec roles() :: [atom()]
   def roles, do: Map.keys(@light_roles) |> Enum.sort()
 
+  @doc """
+  Emits the theme as a W3C [Design Tokens Community Group](https://www.designtokens.org/)
+  token file.
+
+  Produces two top-level groups:
+
+  * `"palette"` — the five tonal scales (primary, secondary,
+    tertiary, neutral, neutral-variant), each as a stop-keyed
+    group of color tokens.
+
+  * `"role"` — Material 3 role tokens (`primary`, `on_primary`,
+    `surface`, etc.) emitted as **DTCG alias tokens** that
+    reference the corresponding stop in `"palette"`. Tools that
+    resolve aliases will see both the raw palette and the
+    semantic vocabulary.
+
+  ### Arguments
+
+  * `theme` is a `Color.Palette.Theme` struct.
+
+  ### Options
+
+  * `:space` is the colour space for emitted stop values. Any
+    module accepted by `Color.convert/2`. Default `Color.Oklch`.
+
+  * `:scheme` is `:light` (default) or `:dark`. Controls which
+    tone each role aliases to.
+
+  ### Returns
+
+  * A map with `"palette"` and `"role"` keys.
+
+  ### Examples
+
+      iex> theme = Color.Palette.Theme.new("#3b82f6")
+      iex> tokens = Color.Palette.Theme.to_tokens(theme)
+      iex> tokens["palette"]["primary"]["40"]["$type"]
+      "color"
+      iex> tokens["role"]["primary"]["$value"]
+      "{palette.primary.40}"
+
+  """
+  @spec to_tokens(t(), keyword()) :: map()
+  def to_tokens(%__MODULE__{} = theme, options \\ []) do
+    space = Keyword.get(options, :space, Color.Oklch)
+    scheme = Keyword.get(options, :scheme, :light)
+
+    palette_group =
+      %{
+        "primary" => scale_tokens(theme.primary, space),
+        "secondary" => scale_tokens(theme.secondary, space),
+        "tertiary" => scale_tokens(theme.tertiary, space),
+        "neutral" => scale_tokens(theme.neutral, space),
+        "neutral_variant" => scale_tokens(theme.neutral_variant, space)
+      }
+
+    roles =
+      case scheme do
+        :light -> @light_roles
+        :dark -> @dark_roles
+      end
+
+    role_group =
+      Enum.into(roles, %{}, fn {role, {palette_key, stop}} ->
+        alias_path = "{palette.#{palette_key}.#{stop}}"
+        {Atom.to_string(role), %{"$type" => "color", "$value" => alias_path}}
+      end)
+
+    %{"palette" => palette_group, "role" => role_group}
+  end
+
+  defp scale_tokens(%Color.Palette.Tonal{} = palette, space) do
+    Enum.into(palette.stops, %{}, fn {label, color} ->
+      {to_string(label), Color.DesignTokens.encode_token(color, space: space)}
+    end)
+  end
+
   # ---- builders -----------------------------------------------------------
 
   # Build a tonal scale at a specific hue and chroma, by

@@ -437,4 +437,125 @@ defmodule Color.PaletteTest do
       assert via_facade.stops == direct.stops
     end
   end
+
+  describe "Tonal.to_tokens/2 (DTCG)" do
+    test "emits a named group keyed by stop label" do
+      palette = Tonal.new("#3b82f6", name: "blue")
+      tokens = Tonal.to_tokens(palette)
+
+      assert Map.keys(tokens) == ["blue"]
+      blue = tokens["blue"]
+
+      assert Map.keys(blue) |> Enum.sort() ==
+               ["100", "200", "300", "400", "50", "500", "600", "700", "800", "900", "950"]
+    end
+
+    test "every stop is a valid DTCG color token" do
+      palette = Tonal.new("#3b82f6", name: "blue")
+      tokens = Tonal.to_tokens(palette)
+
+      for {_label, token} <- tokens["blue"] do
+        assert token["$type"] == "color"
+        assert %{"colorSpace" => _, "components" => _, "hex" => _} = token["$value"]
+      end
+    end
+
+    test "default emit space is Oklch" do
+      palette = Tonal.new("#3b82f6", name: "blue")
+      tokens = Tonal.to_tokens(palette)
+
+      assert tokens["blue"]["500"]["$value"]["colorSpace"] == "oklch"
+    end
+
+    test "alternative space via :space option" do
+      palette = Tonal.new("#3b82f6", name: "blue")
+      tokens = Tonal.to_tokens(palette, space: Color.SRGB)
+
+      assert tokens["blue"]["500"]["$value"]["colorSpace"] == "srgb"
+    end
+
+    test "falls back to \"color\" when palette has no name" do
+      palette = Tonal.new("#3b82f6")
+      tokens = Tonal.to_tokens(palette)
+
+      assert Map.keys(tokens) == ["color"]
+    end
+  end
+
+  describe "Theme.to_tokens/2 (DTCG)" do
+    test "has palette + role groups" do
+      theme = Theme.new("#3b82f6")
+      tokens = Theme.to_tokens(theme)
+
+      assert Map.has_key?(tokens, "palette")
+      assert Map.has_key?(tokens, "role")
+    end
+
+    test "palette group has all five sub-palettes" do
+      theme = Theme.new("#3b82f6")
+      tokens = Theme.to_tokens(theme)
+
+      for key <- ["primary", "secondary", "tertiary", "neutral", "neutral_variant"] do
+        assert Map.has_key?(tokens["palette"], key)
+      end
+    end
+
+    test "role tokens are DTCG aliases pointing into palette" do
+      theme = Theme.new("#3b82f6")
+      tokens = Theme.to_tokens(theme)
+
+      primary = tokens["role"]["primary"]
+      assert primary["$type"] == "color"
+      assert primary["$value"] == "{palette.primary.40}"
+
+      on_primary = tokens["role"]["on_primary"]
+      assert on_primary["$value"] == "{palette.primary.100}"
+    end
+
+    test "dark scheme uses different role tones" do
+      theme = Theme.new("#3b82f6")
+      light = Theme.to_tokens(theme, scheme: :light)
+      dark = Theme.to_tokens(theme, scheme: :dark)
+
+      assert light["role"]["primary"]["$value"] == "{palette.primary.40}"
+      assert dark["role"]["primary"]["$value"] == "{palette.primary.80}"
+    end
+  end
+
+  describe "Contrast.to_tokens/2 (DTCG)" do
+    test "emits one token per target" do
+      palette = Contrast.new("#3b82f6", targets: [3.0, 4.5, 7.0])
+      tokens = Contrast.to_tokens(palette)
+
+      assert Map.keys(tokens["contrast"]) |> Enum.sort() == ["3", "4.5", "7"]
+    end
+
+    test "reachable stops have $value with colorSpace" do
+      palette = Contrast.new("#3b82f6", targets: [4.5])
+      tokens = Contrast.to_tokens(palette)
+
+      t = tokens["contrast"]["4.5"]
+      assert t["$type"] == "color"
+      assert t["$value"]["colorSpace"] == "oklch"
+    end
+
+    test "reachable stops carry the achieved ratio in $extensions" do
+      palette = Contrast.new("#3b82f6", targets: [4.5])
+      tokens = Contrast.to_tokens(palette)
+
+      ext = tokens["contrast"]["4.5"]["$extensions"]["color"]
+      assert_in_delta ext["achieved"], 4.5, 0.1
+      assert ext["metric"] == "wcag"
+    end
+
+    test "unreachable stops emit a null $value with a reason" do
+      # 21:1 is unreachable for a saturated blue against white
+      palette = Contrast.new("#3b82f6", targets: [4.5, 21.5])
+      tokens = Contrast.to_tokens(palette)
+
+      impossible = tokens["contrast"]["21.5"]
+      assert impossible["$value"] == nil
+      assert impossible["$extensions"]["color"]["reason"] == "unreachable"
+    end
+  end
 end

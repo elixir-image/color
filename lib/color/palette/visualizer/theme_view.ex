@@ -73,7 +73,28 @@ defmodule Color.Palette.Visualizer.ThemeView do
   end
 
   defp success_body(%Theme{} = theme, scheme) do
-    [scales_section(theme), roles_section(theme, scheme)]
+    [
+      scales_section(theme),
+      roles_section(theme, scheme),
+      tokens_section(theme, scheme)
+    ]
+  end
+
+  defp tokens_section(%Theme{} = theme, scheme) do
+    json =
+      theme
+      |> Theme.to_tokens(scheme: scheme)
+      |> Render.pretty_json()
+      |> Render.escape()
+
+    [
+      "<section class=\"vz-section\">",
+      "<h2>Design Tokens (W3C DTCG)</h2>",
+      "<div class=\"vz-export\">",
+      json,
+      "</div>",
+      "</section>"
+    ]
   end
 
   defp scales_section(%Theme{} = theme) do

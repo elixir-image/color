@@ -46,6 +46,7 @@ defmodule Color.Palette.Visualizer.TonalView do
       "<h2>Tonal scale</h2>",
       Render.tonal_strip(palette),
       "</section>",
+      "<div class=\"vz-exports\">",
       "<section class=\"vz-section\">",
       "<h2>CSS custom properties</h2>",
       "<div class=\"vz-export\">",
@@ -57,8 +58,22 @@ defmodule Color.Palette.Visualizer.TonalView do
       "<div class=\"vz-export\">",
       tailwind_export(palette),
       "</div>",
-      "</section>"
+      "</section>",
+      "<section class=\"vz-section\">",
+      "<h2>Design Tokens (W3C DTCG)</h2>",
+      "<div class=\"vz-export\">",
+      design_tokens_export(palette),
+      "</div>",
+      "</section>",
+      "</div>"
     ]
+  end
+
+  defp design_tokens_export(%Tonal{} = palette) do
+    palette
+    |> Tonal.to_tokens()
+    |> Render.pretty_json()
+    |> Render.escape()
   end
 
   defp css_export(%Tonal{} = palette) do

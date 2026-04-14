@@ -43,8 +43,8 @@ defmodule Color.Palette.VisualizerTest do
       conn = conn(:get, "/tonal?seed=%23ff00aa") |> Color.Palette.Visualizer.call(@opts)
 
       assert conn.status == 200
-      # The exported CSS block should contain a stop derived from this seed.
-      assert conn.resp_body =~ "--color-500"
+      # The seed hex lands at whichever stop it snaps to.
+      assert conn.resp_body =~ ~r/--color-\d+: #ff00aa/
     end
 
     test "honours the hue_drift flag" do
@@ -63,6 +63,73 @@ defmodule Color.Palette.VisualizerTest do
 
       assert conn.status == 200
       assert conn.resp_body =~ "Could not parse seed"
+    end
+
+    test "renders a <input type=color> picker with the seed's hex" do
+      conn = conn(:get, "/tonal?seed=%233b82f6") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.resp_body =~ ~s(type="color" name="seed_picker" value="#3b82f6")
+    end
+
+    test "picker initialises to the hex of a named colour seed" do
+      conn = conn(:get, "/tonal?seed=rebeccapurple") |> Color.Palette.Visualizer.call(@opts)
+
+      # rebeccapurple = #663399
+      assert conn.resp_body =~ ~s(type="color" name="seed_picker" value="#663399")
+    end
+
+    test "exports a Design Tokens JSON block" do
+      conn = conn(:get, "/tonal?seed=%233b82f6") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.resp_body =~ "Design Tokens"
+      assert conn.resp_body =~ "$type"
+      assert conn.resp_body =~ "oklch"
+    end
+  end
+
+  describe "seed_picker precedence" do
+    # The seed always appears verbatim at its snapped stop in the
+    # CSS export block, so `=~ "--color-<N>: <seed hex>"` is a
+    # clean way to verify which seed was actually used.
+    defp seed_in_css?(body, seed_hex) do
+      body =~ ~r/--color-\d+: #{seed_hex}/
+    end
+
+    test "picker-only submit uses picker value" do
+      conn =
+        conn(:get, "/tonal?seed_picker=%23ff0000&seed_picker_initial=%233b82f6")
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert seed_in_css?(conn.resp_body, "#ff0000")
+    end
+
+    test "text field wins when it differs from picker initial" do
+      conn =
+        conn(
+          :get,
+          "/tonal?seed=rebeccapurple&seed_picker=%233b82f6&seed_picker_initial=%233b82f6"
+        )
+        |> Color.Palette.Visualizer.call(@opts)
+
+      # rebeccapurple → #663399
+      assert seed_in_css?(conn.resp_body, "#663399")
+    end
+
+    test "picker wins when text field is unchanged from picker initial" do
+      conn =
+        conn(
+          :get,
+          "/tonal?seed=%233b82f6&seed_picker=%23ff0000&seed_picker_initial=%233b82f6"
+        )
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert seed_in_css?(conn.resp_body, "#ff0000")
+    end
+
+    test "falls back to default when neither is present" do
+      conn = conn(:get, "/tonal") |> Color.Palette.Visualizer.call(@opts)
+
+      assert seed_in_css?(conn.resp_body, "#3b82f6")
     end
   end
 

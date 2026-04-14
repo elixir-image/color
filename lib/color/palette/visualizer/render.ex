@@ -53,6 +53,7 @@ defmodule Color.Palette.Visualizer.Render do
 
   defp header(active, seed, base, extra_fields) do
     tabs = [{"tonal", "Tonal"}, {"theme", "Theme"}, {"contrast", "Contrast"}]
+    seed_hex = resolve_hex(seed, "#3b82f6")
 
     [
       "<header class=\"vz-header\">",
@@ -79,14 +80,36 @@ defmodule Color.Palette.Visualizer.Render do
       "/",
       active,
       "\">",
-      "<label>seed <input type=\"text\" name=\"seed\" value=\"",
+      "<label>seed <input type=\"color\" name=\"seed_picker\" value=\"",
+      escape(seed_hex),
+      "\"> <input type=\"text\" name=\"seed\" value=\"",
       escape(seed),
-      "\" placeholder=\"#3b82f6\"></label>",
+      "\" placeholder=\"#3b82f6 or rebeccapurple or oklch(...)\"></label>",
+      "<input type=\"hidden\" name=\"seed_picker_initial\" value=\"",
+      escape(seed_hex),
+      "\">",
       extra_fields,
       "<button type=\"submit\">Update</button>",
       "</form>",
       "</header>"
     ]
+  end
+
+  @doc """
+  Resolves any colour input to a 7-char hex string suitable for
+  `<input type="color">`. Falls back to `default` if parsing
+  fails. Used to initialise the native colour picker.
+  """
+  @spec resolve_hex(binary() | nil, binary()) :: binary()
+  def resolve_hex(nil, default), do: default
+
+  def resolve_hex(input, default) do
+    case Color.new(input) do
+      {:ok, srgb} -> Color.to_hex(srgb)
+      _ -> default
+    end
+  rescue
+    _ -> default
   end
 
   defp error_block(nil), do: []
@@ -187,4 +210,43 @@ defmodule Color.Palette.Visualizer.Render do
   @spec fmt(number(), non_neg_integer()) :: binary()
   def fmt(n, places) when is_number(n), do: :erlang.float_to_binary(n * 1.0, decimals: places)
   def fmt(_, _), do: "—"
+
+  @doc """
+  Pretty-prints a JSON-encodable value (map / list / scalar) as
+  an indented binary, using Erlang's `:json` for encoding leaves
+  and a small hand-rolled formatter for layout. Sorts map keys
+  alphabetically so the output is stable.
+  """
+  @spec pretty_json(term()) :: binary()
+  def pretty_json(value), do: format_value(value, 0)
+
+  defp format_value(map, depth) when is_map(map) do
+    if map_size(map) == 0 do
+      "{}"
+    else
+      entries =
+        map
+        |> Enum.sort_by(fn {k, _} -> k end)
+        |> Enum.map(fn {k, v} ->
+          indent(depth + 1) <>
+            IO.iodata_to_binary(:json.encode(k)) <> ": " <> format_value(v, depth + 1)
+        end)
+        |> Enum.join(",\n")
+
+      "{\n" <> entries <> "\n" <> indent(depth) <> "}"
+    end
+  end
+
+  defp format_value(list, depth) when is_list(list) do
+    if list == [] do
+      "[]"
+    else
+      inner = Enum.map_join(list, ", ", fn v -> format_value(v, depth) end)
+      "[" <> inner <> "]"
+    end
+  end
+
+  defp format_value(other, _depth), do: IO.iodata_to_binary(:json.encode(other))
+
+  defp indent(depth), do: String.duplicate("  ", depth)
 end

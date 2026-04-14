@@ -234,6 +234,25 @@ defmodule Color.Palette.Visualizer.Assets do
   }
   .vz-export .comment { color: var(--vz-text-faint); }
 
+  /* Three-column layout for stacking related export blocks side-by-side.
+     Falls back to fewer columns at narrower viewports. Each column is a
+     .vz-section so its h2 and .vz-export sit naturally stacked inside. */
+  .vz-exports {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  .vz-exports > .vz-section { margin-bottom: 0; }
+  .vz-exports > .vz-section > .vz-export { min-width: 0; }
+
+  @media (max-width: 1100px) {
+    .vz-exports { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .vz-exports { grid-template-columns: 1fr; }
+  }
+
   .vz-footer {
     margin-top: 40px;
     padding: 16px 0;
