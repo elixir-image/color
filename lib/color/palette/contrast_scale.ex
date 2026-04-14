@@ -320,6 +320,54 @@ defmodule Color.Palette.ContrastScale do
   end
 
   @doc """
+  Returns `true` when every stop in the palette is inside the
+  given RGB working space. See `Color.Palette.Tonal.in_gamut?/2`
+  for details.
+
+  ### Examples
+
+      iex> palette = Color.Palette.ContrastScale.new("#3b82f6")
+      iex> Color.Palette.ContrastScale.in_gamut?(palette, :SRGB)
+      true
+
+  """
+  @spec in_gamut?(t(), Color.Types.working_space()) :: boolean()
+  def in_gamut?(%__MODULE__{stops: stops}, working_space \\ :SRGB) do
+    Enum.all?(stops, fn {_label, color} ->
+      Color.Gamut.in_gamut?(color, working_space)
+    end)
+  end
+
+  @doc """
+  Returns a detailed per-stop gamut report. See
+  `Color.Palette.Tonal.gamut_report/2` for the shape.
+
+  ### Examples
+
+      iex> palette = Color.Palette.ContrastScale.new("#3b82f6")
+      iex> %{in_gamut?: true} = Color.Palette.ContrastScale.gamut_report(palette, :SRGB)
+
+  """
+  @spec gamut_report(t(), Color.Types.working_space()) :: map()
+  def gamut_report(%__MODULE__{} = palette, working_space \\ :SRGB) do
+    stops =
+      palette
+      |> labels()
+      |> Enum.map(fn label ->
+        color = Map.fetch!(palette.stops, label)
+        in_gamut? = Color.Gamut.in_gamut?(color, working_space)
+        %{label: label, color: color, in_gamut?: in_gamut?}
+      end)
+
+    %{
+      working_space: working_space,
+      in_gamut?: Enum.all?(stops, & &1.in_gamut?),
+      stops: stops,
+      out_of_gamut: Enum.reject(stops, & &1.in_gamut?)
+    }
+  end
+
+  @doc """
   Emits the palette as a block of **CSS custom properties**. See
   `Color.Palette.Tonal.to_css/2` for option details.
 

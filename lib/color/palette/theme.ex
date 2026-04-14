@@ -285,6 +285,94 @@ defmodule Color.Palette.Theme do
   def roles, do: Map.keys(@light_roles) |> Enum.sort()
 
   @doc """
+  Returns `true` when every stop across all five sub-palettes
+  (primary, secondary, tertiary, neutral, neutral-variant) is
+  inside the given RGB working space.
+
+  ### Arguments
+
+  * `theme` is a `Color.Palette.Theme` struct.
+
+  * `working_space` is an RGB working-space atom. Defaults to
+    `:SRGB`.
+
+  ### Returns
+
+  * A boolean.
+
+  ### Examples
+
+      iex> theme = Color.Palette.Theme.new("#3b82f6")
+      iex> Color.Palette.Theme.in_gamut?(theme, :SRGB)
+      true
+
+  """
+  @spec in_gamut?(t(), Color.Types.working_space()) :: boolean()
+  def in_gamut?(%__MODULE__{} = theme, working_space \\ :SRGB) do
+    [:primary, :secondary, :tertiary, :neutral, :neutral_variant]
+    |> Enum.all?(fn key ->
+      Color.Palette.Tonal.in_gamut?(Map.fetch!(theme, key), working_space)
+    end)
+  end
+
+  @doc """
+  Returns a detailed gamut report broken down by sub-palette.
+
+  ### Arguments
+
+  * `theme` is a `Color.Palette.Theme` struct.
+
+  * `working_space` defaults to `:SRGB`.
+
+  ### Returns
+
+  * A map with:
+
+    * `:working_space` — the space checked against.
+
+    * `:in_gamut?` — `true` if every stop in every sub-palette
+      is inside.
+
+    * `:sub_palettes` — map of sub-palette key →
+      `Color.Palette.Tonal.gamut_report/2` result.
+
+    * `:out_of_gamut` — flat list of `%{sub_palette, label,
+      color}` for stops that failed, across every sub-palette.
+
+  ### Examples
+
+      iex> theme = Color.Palette.Theme.new("#3b82f6")
+      iex> report = Color.Palette.Theme.gamut_report(theme, :SRGB)
+      iex> report.in_gamut?
+      true
+      iex> Map.keys(report.sub_palettes) |> Enum.sort()
+      [:neutral, :neutral_variant, :primary, :secondary, :tertiary]
+
+  """
+  @spec gamut_report(t(), Color.Types.working_space()) :: map()
+  def gamut_report(%__MODULE__{} = theme, working_space \\ :SRGB) do
+    keys = [:primary, :secondary, :tertiary, :neutral, :neutral_variant]
+
+    sub_reports =
+      Enum.into(keys, %{}, fn key ->
+        report = Color.Palette.Tonal.gamut_report(Map.fetch!(theme, key), working_space)
+        {key, report}
+      end)
+
+    flattened_out =
+      Enum.flat_map(sub_reports, fn {key, report} ->
+        Enum.map(report.out_of_gamut, &Map.put(&1, :sub_palette, key))
+      end)
+
+    %{
+      working_space: working_space,
+      in_gamut?: Enum.all?(sub_reports, fn {_, r} -> r.in_gamut? end),
+      sub_palettes: sub_reports,
+      out_of_gamut: flattened_out
+    }
+  end
+
+  @doc """
   Emits the theme as a W3C [Design Tokens Community Group](https://www.designtokens.org/)
   token file.
 

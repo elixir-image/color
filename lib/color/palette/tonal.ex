@@ -250,6 +250,95 @@ defmodule Color.Palette.Tonal do
   end
 
   @doc """
+  Returns `true` when every stop in the palette is inside the
+  given RGB working space.
+
+  Convenient for CI checks — fail the build if a palette
+  generated against one working space slips outside another's
+  gamut.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Tonal` struct.
+
+  * `working_space` is an RGB working-space atom. Defaults to
+    `:SRGB`.
+
+  ### Returns
+
+  * A boolean.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Tonal.new("#3b82f6")
+      iex> Color.Palette.Tonal.in_gamut?(palette, :SRGB)
+      true
+
+  """
+  @spec in_gamut?(t(), Color.Types.working_space()) :: boolean()
+  def in_gamut?(%__MODULE__{stops: stops}, working_space \\ :SRGB) do
+    Enum.all?(stops, fn {_label, color} ->
+      Color.Gamut.in_gamut?(color, working_space)
+    end)
+  end
+
+  @doc """
+  Returns a detailed per-stop gamut report.
+
+  Useful for actionable CI output: which specific stops fell
+  outside the target gamut and need attention.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Tonal` struct.
+
+  * `working_space` is an RGB working-space atom. Defaults to
+    `:SRGB`.
+
+  ### Returns
+
+  * A map with:
+
+    * `:working_space` — the space the check was performed against.
+
+    * `:in_gamut?` — `true` if every stop is inside, else `false`.
+
+    * `:stops` — list of `%{label, color, in_gamut?}` maps, one
+      per stop, in label order.
+
+    * `:out_of_gamut` — list of the same map shape, filtered to
+      stops that are outside the target space.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Tonal.new("#3b82f6")
+      iex> report = Color.Palette.Tonal.gamut_report(palette, :SRGB)
+      iex> report.in_gamut?
+      true
+      iex> report.out_of_gamut
+      []
+
+  """
+  @spec gamut_report(t(), Color.Types.working_space()) :: map()
+  def gamut_report(%__MODULE__{} = palette, working_space \\ :SRGB) do
+    stops =
+      palette
+      |> labels()
+      |> Enum.map(fn label ->
+        color = Map.fetch!(palette.stops, label)
+        in_gamut? = Color.Gamut.in_gamut?(color, working_space)
+        %{label: label, color: color, in_gamut?: in_gamut?}
+      end)
+
+    %{
+      working_space: working_space,
+      in_gamut?: Enum.all?(stops, & &1.in_gamut?),
+      stops: stops,
+      out_of_gamut: Enum.reject(stops, & &1.in_gamut?)
+    }
+  end
+
+  @doc """
   Emits the palette as a block of **CSS custom properties**,
   one per stop, keyed by the palette name.
 

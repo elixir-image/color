@@ -184,6 +184,86 @@ defmodule Color.Palette.Contrast do
   end
 
   @doc """
+  Returns `true` when every reachable stop in the palette is
+  inside the given RGB working space.
+
+  Unreachable stops (`:unreachable` sentinel) are ignored — they
+  have no colour to check.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Contrast` struct.
+
+  * `working_space` is an RGB working-space atom. Defaults to
+    `:SRGB`.
+
+  ### Returns
+
+  * A boolean.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Contrast.new("#3b82f6", targets: [4.5, 7.0])
+      iex> Color.Palette.Contrast.in_gamut?(palette, :SRGB)
+      true
+
+  """
+  @spec in_gamut?(t(), Color.Types.working_space()) :: boolean()
+  def in_gamut?(%__MODULE__{stops: stops}, working_space \\ :SRGB) do
+    Enum.all?(stops, fn
+      %{color: :unreachable} -> true
+      %{color: color} -> Color.Gamut.in_gamut?(color, working_space)
+    end)
+  end
+
+  @doc """
+  Returns a detailed gamut report on a contrast palette.
+
+  Each reachable stop becomes a `%{target, color, in_gamut?}`
+  entry; unreachable stops become `%{target, color: :unreachable}`.
+
+  ### Arguments
+
+  * `palette` is a `Color.Palette.Contrast` struct.
+
+  * `working_space` is an RGB working-space atom. Defaults to
+    `:SRGB`.
+
+  ### Returns
+
+  * A map with `:working_space`, `:in_gamut?`, `:stops`, and
+    `:out_of_gamut`.
+
+  ### Examples
+
+      iex> palette = Color.Palette.Contrast.new("#3b82f6", targets: [4.5, 7.0])
+      iex> %{in_gamut?: true} = Color.Palette.Contrast.gamut_report(palette, :SRGB)
+
+  """
+  @spec gamut_report(t(), Color.Types.working_space()) :: map()
+  def gamut_report(%__MODULE__{stops: stops}, working_space \\ :SRGB) do
+    entries =
+      Enum.map(stops, fn
+        %{color: :unreachable} = stop ->
+          %{target: stop.target, color: :unreachable, in_gamut?: true}
+
+        %{color: color, target: target} ->
+          %{
+            target: target,
+            color: color,
+            in_gamut?: Color.Gamut.in_gamut?(color, working_space)
+          }
+      end)
+
+    %{
+      working_space: working_space,
+      in_gamut?: Enum.all?(entries, & &1.in_gamut?),
+      stops: entries,
+      out_of_gamut: Enum.reject(entries, & &1.in_gamut?)
+    }
+  end
+
+  @doc """
   Emits the palette as a W3C [Design Tokens Community Group](https://www.designtokens.org/)
   color-token group.
 

@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
+* Palette gamut checks. `Color.Palette.in_gamut?/2` and `Color.Palette.gamut_report/2` answer "is every stop in this palette inside the chosen RGB working space?", with `gamut_report/2` returning a per-stop breakdown listing exactly which stops failed.
+
 * Public APIs for designer-tool integrations. `Color.Palette.Tonal.to_css/2` and `Color.Palette.ContrastScale.to_css/2` emit CSS custom-property blocks (selector and name prefix configurable). `Color.Palette.Tonal.to_tailwind/2` and `Color.Palette.ContrastScale.to_tailwind/2` emit `theme.extend.colors` fragments ready for `tailwind.config.js`. `Color.Gamut.SVG.render/1` renders a complete chromaticity-diagram SVG — projection, gamut overlays, Planckian locus, seed / palette overlays, sizing, and colour overrides all under a single keyword-list API. 
 
 * `Color.Gamut.Diagram` — pure-data module for chromaticity diagrams.

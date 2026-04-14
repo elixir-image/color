@@ -172,4 +172,76 @@ defmodule Color.Palette do
   """
   @spec contrast_scale(Color.input(), keyword()) :: ContrastScale.t()
   defdelegate contrast_scale(seed, options \\ []), to: ContrastScale, as: :new
+
+  @doc """
+  Returns `true` if every stop in the given palette is inside
+  the chosen RGB working space.
+
+  Dispatches on the palette struct type, so works uniformly for
+  `Color.Palette.Tonal`, `Color.Palette.Theme`,
+  `Color.Palette.Contrast`, and `Color.Palette.ContrastScale`.
+
+  Intended primarily for CI checks — call once per palette and
+  fail the build if the result is `false`.
+
+  ### Arguments
+
+  * `palette` is any palette struct produced by this module.
+
+  * `working_space` is an RGB working-space atom. Defaults to
+    `:SRGB`.
+
+  ### Returns
+
+  * A boolean.
+
+  ### Examples
+
+      iex> palette = Color.Palette.tonal("#3b82f6")
+      iex> Color.Palette.in_gamut?(palette)
+      true
+
+      iex> theme = Color.Palette.theme("#3b82f6")
+      iex> Color.Palette.in_gamut?(theme, :SRGB)
+      true
+
+  """
+  @spec in_gamut?(struct(), Color.Types.working_space()) :: boolean()
+  def in_gamut?(palette, working_space \\ :SRGB)
+  def in_gamut?(%Tonal{} = p, ws), do: Tonal.in_gamut?(p, ws)
+  def in_gamut?(%Theme{} = p, ws), do: Theme.in_gamut?(p, ws)
+  def in_gamut?(%Contrast{} = p, ws), do: Contrast.in_gamut?(p, ws)
+  def in_gamut?(%ContrastScale{} = p, ws), do: ContrastScale.in_gamut?(p, ws)
+
+  @doc """
+  Returns a detailed gamut report on the given palette.
+
+  Dispatches on palette type — see each palette module's
+  `gamut_report/2` for the returned map's exact shape.
+
+  ### Arguments
+
+  * `palette` is any palette struct produced by this module.
+
+  * `working_space` defaults to `:SRGB`.
+
+  ### Returns
+
+  * A map. The top-level `:in_gamut?` key is present on every
+    palette type.
+
+  ### Examples
+
+      iex> palette = Color.Palette.tonal("#3b82f6")
+      iex> report = Color.Palette.gamut_report(palette, :SRGB)
+      iex> report.in_gamut?
+      true
+
+  """
+  @spec gamut_report(struct(), Color.Types.working_space()) :: map()
+  def gamut_report(palette, working_space \\ :SRGB)
+  def gamut_report(%Tonal{} = p, ws), do: Tonal.gamut_report(p, ws)
+  def gamut_report(%Theme{} = p, ws), do: Theme.gamut_report(p, ws)
+  def gamut_report(%Contrast{} = p, ws), do: Contrast.gamut_report(p, ws)
+  def gamut_report(%ContrastScale{} = p, ws), do: ContrastScale.gamut_report(p, ws)
 end

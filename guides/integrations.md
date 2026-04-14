@@ -13,6 +13,7 @@ Everything the visualizer does is reachable programmatically. The visualizer is 
 | Export as Tailwind config | `Color.Palette.Tonal.to_tailwind/2`, `Color.Palette.ContrastScale.to_tailwind/2` |
 | Export as W3C DTCG tokens | `Color.Palette.Tonal.to_tokens/2`, `Color.Palette.Theme.to_tokens/2`, `Color.Palette.Contrast.to_tokens/2`, `Color.Palette.ContrastScale.to_tokens/2` |
 | Encode JSON | `:json.encode/1` (Erlang built-in) |
+| Check if a palette is inside a gamut | `Color.Palette.in_gamut?/2`, `Color.Palette.gamut_report/2` |
 | Render a gamut diagram as SVG | `Color.Gamut.SVG.render/1` |
 | Get raw gamut geometry | `Color.Gamut.Diagram.spectral_locus/2`, `triangle/2`, `planckian_locus/2`, `chromaticity/2` |
 | Encode / decode individual colours as DTCG | `Color.DesignTokens.encode/2`, `decode/1` |
@@ -232,6 +233,72 @@ sRGB_triangle = Color.Gamut.Diagram.triangle(:SRGB, :uv)
 {:ok, blue_point} = Color.Gamut.Diagram.chromaticity("#3b82f6", :uv)
 ```
 
+## Gamut audits — CI checks for palette accessibility
+
+When a palette is generated, our algorithms gamut-map every stop into the working space passed via `:gamut` (default `:SRGB`). But palettes often travel — generated against sRGB on a designer's MacBook, hand-edited by a colourist in Display P3, re-imported through a DTCG file, then deployed to users on devices that span every display gamut. A CI check that "this palette is still legal sRGB after every transformation" is exactly the kind of guard you want in a design-system pipeline.
+
+`Color.Palette.in_gamut?/2` answers a single yes/no across every stop:
+
+```elixir
+palette = Color.Palette.tonal("#3b82f6")
+
+if Color.Palette.in_gamut?(palette, :SRGB) do
+  :ok
+else
+  raise "Brand palette has escaped sRGB"
+end
+```
+
+Need to know **which** stops failed? Use `gamut_report/2`:
+
+```elixir
+report = Color.Palette.gamut_report(palette, :SRGB)
+# %{
+#   working_space: :SRGB,
+#   in_gamut?: false,
+#   stops: [%{label: 50, color: ..., in_gamut?: true}, ...],
+#   out_of_gamut: [%{label: 700, color: ..., in_gamut?: false}, ...]
+# }
+
+for %{label: l, color: c} <- report.out_of_gamut do
+  IO.puts("Stop #{l} (#{Color.to_hex(c)}) is outside sRGB")
+end
+```
+
+Both functions dispatch on palette type — they work uniformly across `Tonal`, `Theme`, `Contrast`, and `ContrastScale`. For `Theme`, `gamut_report/2` returns the breakdown per sub-palette under `:sub_palettes` plus a flat `:out_of_gamut` list with `:sub_palette` keys for actionable failures.
+
+A complete Mix task you can wire into CI:
+
+```elixir
+defmodule Mix.Tasks.Brand.Audit do
+  use Mix.Task
+
+  @shortdoc "Fails the build if the brand palette has escaped a target gamut"
+
+  def run([hex | rest]) do
+    target = case rest do
+      [name] -> String.to_existing_atom(name)
+      _ -> :SRGB
+    end
+
+    report = Color.Palette.tonal(hex) |> Color.Palette.gamut_report(target)
+
+    if report.in_gamut? do
+      Mix.shell().info("✓ Palette is fully inside #{target}")
+    else
+      bad = Enum.map(report.out_of_gamut, fn %{label: l, color: c} ->
+        "  - stop #{l} (#{Color.to_hex(c)})"
+      end)
+
+      Mix.raise("✗ Palette has #{length(report.out_of_gamut)} stops outside #{target}:\n" <>
+                Enum.join(bad, "\n"))
+    end
+  end
+end
+```
+
+Run it in CI as `mix brand.audit "#3b82f6" SRGB`. Non-zero exit on failure with a clear list of which stops broke.
+
 ## Decoding external Design Tokens
 
 If you're importing a DTCG token file from Figma, Style Dictionary, or another tool, decode individual colour tokens back into `Color.*` structs:
@@ -317,7 +384,7 @@ Run it with `mix brand.generate "#3b82f6"` and you have four coordinated artefac
 | A live theme editor for a customer-branded SaaS | `to_css/2` + LiveView |
 | A Tailwind-only site with generated brand colours | `to_tailwind/2` + a Mix task |
 | A documentation site for a design system | `Color.Gamut.SVG.render/1` for gamut plots + `to_tokens/2` for reference |
-| A CI check that a palette stays inside sRGB | `Color.Gamut.Diagram.chromaticity/2` + a triangle containment test |
+| A CI check that a palette stays inside sRGB | `Color.Palette.in_gamut?/2` + `gamut_report/2` |
 | A custom diagram renderer (PDF, PostScript, Canvas) | `Color.Gamut.Diagram.spectral_locus/2` + `triangle/2` |
 | Ingesting a DTCG file from Figma | `Color.DesignTokens.decode/1` |
 

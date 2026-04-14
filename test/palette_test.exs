@@ -748,6 +748,81 @@ defmodule Color.PaletteTest do
     end
   end
 
+  describe "in_gamut? / gamut_report" do
+    test "Tonal palette generated against sRGB is fully inside sRGB" do
+      palette = Tonal.new("#3b82f6")
+      assert Tonal.in_gamut?(palette, :SRGB) == true
+
+      report = Tonal.gamut_report(palette, :SRGB)
+      assert report.in_gamut? == true
+      assert report.out_of_gamut == []
+      assert length(report.stops) == 11
+      assert Enum.all?(report.stops, & &1.in_gamut?)
+    end
+
+    test "ContrastScale palette is fully inside sRGB" do
+      palette = ContrastScale.new("#3b82f6")
+      assert ContrastScale.in_gamut?(palette, :SRGB)
+      assert %{in_gamut?: true, out_of_gamut: []} = ContrastScale.gamut_report(palette, :SRGB)
+    end
+
+    test "Contrast palette ignores unreachable stops" do
+      palette = Contrast.new("#3b82f6", targets: [4.5, 21.5])
+      # 21.5 is unreachable for a saturated blue, but in_gamut? should still be true
+      # because reachable stops are fine and unreachable stops have no colour to check.
+      assert Contrast.in_gamut?(palette, :SRGB)
+
+      report = Contrast.gamut_report(palette, :SRGB)
+      assert report.in_gamut? == true
+
+      # Both stops in the report; the unreachable one is marked.
+      assert length(report.stops) == 2
+      assert Enum.any?(report.stops, &(&1.color == :unreachable))
+    end
+
+    test "Theme reports per-sub-palette" do
+      theme = Theme.new("#3b82f6")
+      assert Theme.in_gamut?(theme, :SRGB)
+
+      report = Theme.gamut_report(theme, :SRGB)
+      assert report.in_gamut? == true
+
+      assert Map.keys(report.sub_palettes) |> Enum.sort() ==
+               [:neutral, :neutral_variant, :primary, :secondary, :tertiary]
+
+      assert Enum.all?(report.sub_palettes, fn {_, r} -> r.in_gamut? end)
+    end
+
+    test "Color.Palette.in_gamut?/2 dispatches by struct type" do
+      assert Palette.in_gamut?(Tonal.new("#3b82f6"))
+      assert Palette.in_gamut?(Theme.new("#3b82f6"))
+      assert Palette.in_gamut?(Contrast.new("#3b82f6", targets: [4.5]))
+      assert Palette.in_gamut?(ContrastScale.new("#3b82f6"))
+    end
+
+    test "Color.Palette.gamut_report/2 dispatches by struct type" do
+      assert %{in_gamut?: true} = Palette.gamut_report(Tonal.new("#3b82f6"))
+      assert %{in_gamut?: true} = Palette.gamut_report(Theme.new("#3b82f6"))
+      assert %{in_gamut?: true} = Palette.gamut_report(Contrast.new("#3b82f6", targets: [4.5]))
+      assert %{in_gamut?: true} = Palette.gamut_report(ContrastScale.new("#3b82f6"))
+    end
+
+    test "manually-constructed out-of-gamut palette is detected" do
+      # Build a Tonal then mutate one stop to a guaranteed out-of-sRGB
+      # colour: Display P3 red — its (1, 0, 0) maps outside sRGB.
+      palette = Tonal.new("#3b82f6", name: "blue")
+      out = %Color.RGB{r: 1.0, g: 0.0, b: 0.0, working_space: :P3_D65}
+      bad = %{palette | stops: Map.put(palette.stops, 500, out)}
+
+      refute Tonal.in_gamut?(bad, :SRGB)
+
+      report = Tonal.gamut_report(bad, :SRGB)
+      assert report.in_gamut? == false
+      assert length(report.out_of_gamut) == 1
+      assert hd(report.out_of_gamut).label == 500
+    end
+  end
+
   describe "Color.Palette.contrast_scale/2 façade" do
     test "delegates to ContrastScale.new/2" do
       via = Palette.contrast_scale("#3b82f6", name: "x")
