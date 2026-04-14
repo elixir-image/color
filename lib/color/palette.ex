@@ -90,7 +90,7 @@ defmodule Color.Palette do
 
   """
   @spec tonal(Color.input(), keyword()) :: Tonal.t()
-  defdelegate tonal(seed, options \\ []), to: Tonal, as: :new
+  def tonal(seed, options \\ []), do: Tonal.new(seed, options)
 
   @doc """
   Generates a complete Material Design 3 style theme from a seed
@@ -117,7 +117,7 @@ defmodule Color.Palette do
 
   """
   @spec theme(Color.input(), keyword()) :: Theme.t()
-  defdelegate theme(seed, options \\ []), to: Theme, as: :new
+  def theme(seed, options \\ []), do: Theme.new(seed, options)
 
   @doc """
   Generates a contrast-targeted palette — shades whose contrast
@@ -145,7 +145,7 @@ defmodule Color.Palette do
 
   """
   @spec contrast(Color.input(), keyword()) :: Contrast.t()
-  defdelegate contrast(seed, options \\ []), to: Contrast, as: :new
+  def contrast(seed, options \\ []), do: Contrast.new(seed, options)
 
   @doc """
   Generates a contrast-constrained tonal scale. See
@@ -171,7 +171,7 @@ defmodule Color.Palette do
 
   """
   @spec contrast_scale(Color.input(), keyword()) :: ContrastScale.t()
-  defdelegate contrast_scale(seed, options \\ []), to: ContrastScale, as: :new
+  def contrast_scale(seed, options \\ []), do: ContrastScale.new(seed, options)
 
   @doc """
   Returns `true` if every stop in the given palette is inside

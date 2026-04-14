@@ -197,7 +197,7 @@ defmodule Color.DesignTokens do
 
   """
   @spec decode(map() | binary()) :: {:ok, struct()} | {:error, Exception.t()}
-  defdelegate decode(token), to: Decoder
+  def decode(token), do: Decoder.decode(token)
 
   @doc """
   Like `decode/1` but raises on error.

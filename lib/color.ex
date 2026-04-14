@@ -1561,7 +1561,7 @@ defmodule Color do
 
   """
   @spec luminance(input()) :: float()
-  defdelegate luminance(color), to: Color.Contrast, as: :relative_luminance
+  def luminance(color), do: Color.Contrast.relative_luminance(color)
 
   @doc """
   Alias for `luminance/1`. Returns the WCAG 2.x relative luminance of
@@ -1580,7 +1580,7 @@ defmodule Color do
 
   """
   @spec relative_luminance(input()) :: float()
-  defdelegate relative_luminance(color), to: Color.Contrast
+  def relative_luminance(color), do: Color.Contrast.relative_luminance(color)
 
   @doc """
   Serialises a color to a CSS Color Module Level 4 string.
@@ -1739,7 +1739,7 @@ defmodule Color do
 
   """
   @spec to_ansi(input(), keyword()) :: String.t()
-  defdelegate to_ansi(color, options \\ []), to: Color.ANSI, as: :to_string
+  def to_ansi(color, options \\ []), do: Color.ANSI.to_string(color, options)
 
   @doc """
   Sorts a list of colors by a perceptual criterion.
