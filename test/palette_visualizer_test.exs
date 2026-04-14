@@ -4,6 +4,15 @@ defmodule Color.Palette.VisualizerTest do
   import Plug.Test
   import Plug.Conn
 
+  # Silence Plug.Logger's per-request debug lines while this module
+  # runs — they're noisy and drown out test output. The original level
+  # is restored at the end of the suite via on_exit.
+  setup_all do
+    Logger.put_module_level(Plug.Logger, :info)
+    on_exit(fn -> Logger.delete_module_level(Plug.Logger) end)
+    :ok
+  end
+
   @opts Color.Palette.Visualizer.init([])
 
   describe "routing" do
