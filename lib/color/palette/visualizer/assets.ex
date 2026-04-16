@@ -6,10 +6,9 @@ defmodule Color.Palette.Visualizer.Assets do
   # attribute so the visualizer works regardless of the runtime
   # working directory.
 
-  # Compile-time path to logo.png at the project root. __ENV__.file
-  # at compile time gives the absolute path to this source file, so
-  # we walk up to the project root from there rather than depending
-  # on the caller's working directory.
+  # The logo lives at the project root and is listed in the
+  # package's :files so it ships with the Hex package. At compile
+  # time we walk from this source file up to the library root.
   @logo_path __ENV__.file
              |> Path.dirname()
              |> Path.join("../../../../logo.png")

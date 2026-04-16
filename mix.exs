@@ -50,6 +50,7 @@ defmodule Color.MixProject do
       source_url: "https://github.com/elixir-image/color",
       files: [
         "lib",
+        "logo.png",
         "mix.exs",
         "README.md",
         "CHANGELOG.md",
