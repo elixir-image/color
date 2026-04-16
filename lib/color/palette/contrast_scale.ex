@@ -395,15 +395,14 @@ defmodule Color.Palette.ContrastScale do
   end
 
   @doc """
-  Emits the palette as a **Tailwind CSS `theme.extend.colors`
-  config block**. See `Color.Palette.Tonal.to_tailwind/2` for
-  option details.
+  Emits the palette as a **Tailwind CSS v4 `@theme` block**. See
+  `Color.Palette.Tonal.to_tailwind/2` for option details.
 
   ### Examples
 
       iex> palette = Color.Palette.ContrastScale.new("#3b82f6", name: "blue")
       iex> tw = Color.Palette.ContrastScale.to_tailwind(palette)
-      iex> String.contains?(tw, "blue:")
+      iex> String.contains?(tw, "--color-blue-500:")
       true
 
   """
@@ -415,19 +414,10 @@ defmodule Color.Palette.ContrastScale do
     body =
       Enum.map_join(labels, "", fn label ->
         color = Map.fetch!(palette.stops, label)
-        "      #{label}: \"#{Color.to_hex(color)}\",\n"
+        "  --color-#{name}-#{label}: #{Color.to_hex(color)};\n"
       end)
 
-    """
-    theme: {
-      extend: {
-        colors: {
-          #{name}: {
-    #{body}      }
-        }
-      }
-    }
-    """
+    "@theme {\n#{body}}\n"
   end
 
   # ---- algorithm ----------------------------------------------------------

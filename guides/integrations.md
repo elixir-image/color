@@ -101,26 +101,23 @@ Color.Palette.Tonal.to_css(palette,
 
 `Color.Palette.ContrastScale.to_css/2` has the same signature.
 
-## Exporting to Tailwind CSS
+## Exporting to Tailwind CSS v4
+
+Tailwind v4 uses CSS-native `@theme` blocks instead of JS config files. `to_tailwind/2` emits the `--color-*` namespace variables directly:
 
 ```elixir
 palette = Color.Palette.tonal("#ec4899", name: "pink")
 tailwind = Color.Palette.Tonal.to_tailwind(palette)
 #=>
-# theme: {
-#   extend: {
-#     colors: {
-#       pink: {
-#         50: "#fff1f5",
-#         100: "#ffd0de",
-#         ...
-#       }
-#     }
-#   }
+# @theme {
+#   --color-pink-50: #fff1f5;
+#   --color-pink-100: #ffd0de;
+#   ...
+#   --color-pink-950: #2a0013;
 # }
 ```
 
-Drop it into `tailwind.config.js` (or a generated wrapper) at build time:
+Drop it into your Tailwind v4 CSS file and utilities like `bg-pink-500`, `text-pink-200`, etc. are immediately available:
 
 ```elixir
 # Mix task: regenerate Tailwind theme from a brand colour
@@ -129,17 +126,10 @@ defmodule Mix.Tasks.Brand.Tailwind do
 
   def run([hex]) do
     palette = Color.Palette.tonal(hex, name: "brand")
-    config = Color.Palette.Tonal.to_tailwind(palette)
+    css = Color.Palette.Tonal.to_tailwind(palette)
 
-    """
-    module.exports = {
-      content: ["./lib/**/*.{ex,heex}"],
-      #{config}
-    }
-    """
-    |> then(&File.write!("assets/tailwind.config.js", &1))
-
-    Mix.shell().info("Regenerated Tailwind config from #{hex}")
+    File.write!("assets/brand-theme.css", css)
+    Mix.shell().info("Regenerated Tailwind @theme block from #{hex}")
   end
 end
 ```

@@ -389,9 +389,9 @@ defmodule Color.Palette.Tonal do
   end
 
   @doc """
-  Emits the palette as a **Tailwind CSS `theme.extend.colors`
-  config block** — the exact shape Tailwind's `tailwind.config.js`
-  expects inside the nested object syntax.
+  Emits the palette as a **Tailwind CSS v4 `@theme` block** —
+  CSS-native theme variables using the `--color-*` namespace
+  that Tailwind v4 expects.
 
   ### Arguments
 
@@ -404,15 +404,16 @@ defmodule Color.Palette.Tonal do
 
   ### Returns
 
-  * A binary containing a JavaScript object literal fragment.
+  * A binary containing a `@theme` block ready to paste into a
+    Tailwind v4 CSS file.
 
   ### Examples
 
       iex> palette = Color.Palette.Tonal.new("#3b82f6", name: "blue")
       iex> config = Color.Palette.Tonal.to_tailwind(palette)
-      iex> String.contains?(config, "blue:")
+      iex> String.contains?(config, "--color-blue-500:")
       true
-      iex> String.contains?(config, "500:")
+      iex> String.contains?(config, "@theme")
       true
 
   """
@@ -424,19 +425,10 @@ defmodule Color.Palette.Tonal do
     body =
       Enum.map_join(labels, "", fn label ->
         color = Map.fetch!(palette.stops, label)
-        "      #{label}: \"#{Color.to_hex(color)}\",\n"
+        "  --color-#{name}-#{label}: #{Color.to_hex(color)};\n"
       end)
 
-    """
-    theme: {
-      extend: {
-        colors: {
-          #{name}: {
-    #{body}      }
-        }
-      }
-    }
-    """
+    "@theme {\n#{body}}\n"
   end
 
   # ---- algorithm helpers --------------------------------------------------

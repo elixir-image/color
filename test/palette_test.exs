@@ -460,15 +460,14 @@ defmodule Color.PaletteTest do
       assert css =~ "--brand-500:"
     end
 
-    test "to_tailwind emits a theme.extend.colors block" do
+    test "to_tailwind emits a @theme block with --color-* variables" do
       palette = Tonal.new("#3b82f6", name: "blue")
       tw = Tonal.to_tailwind(palette)
 
-      assert tw =~ "theme: {"
-      assert tw =~ "extend: {"
-      assert tw =~ "blue: {"
-      assert tw =~ "50: \"#"
-      assert tw =~ "950: \"#"
+      assert tw =~ "@theme {"
+      assert tw =~ "--color-blue-50:"
+      assert tw =~ "--color-blue-500:"
+      assert tw =~ "--color-blue-950:"
     end
   end
 
@@ -480,10 +479,10 @@ defmodule Color.PaletteTest do
       assert String.starts_with?(css, ":root {\n")
     end
 
-    test "to_tailwind output is a theme block" do
+    test "to_tailwind output is a @theme block" do
       palette = ContrastScale.new("#3b82f6", name: "guaranteed")
       tw = ContrastScale.to_tailwind(palette)
-      assert tw =~ "guaranteed: {"
+      assert tw =~ "--color-guaranteed-500:"
     end
   end
 
