@@ -79,6 +79,8 @@ defmodule Color.Palette.Visualizer.Render do
           escape(base),
           "/",
           path,
+          "?seed=",
+          URI.encode_www_form(seed),
           "\" class=\"",
           cls,
           "\">",

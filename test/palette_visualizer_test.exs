@@ -358,7 +358,7 @@ defmodule Color.Palette.VisualizerTest do
 
       assert conn.status == 200
       assert conn.resp_body =~ ~s(href="/palette/assets/style.css")
-      assert conn.resp_body =~ ~s(href="/palette/tonal")
+      assert conn.resp_body =~ ~s(href="/palette/tonal?seed=)
     end
 
     test "root redirect respects the base path" do
