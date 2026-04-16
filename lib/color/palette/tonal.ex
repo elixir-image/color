@@ -127,13 +127,44 @@ defmodule Color.Palette.Tonal do
     base_h = seed_oklch.h || 0.0
     base_c = seed_oklch.c || 0.0
 
-    # Generate one Oklch struct per stop, then gamut-map.
+    seed_l = seed_oklch.l || 0.5
+    num_stops = length(stops)
+
+    # First pass: find which stop the seed would snap to, and
+    # compute the curve lightness at that position.
+    snap_index = nearest_index(stops, light_anchor, dark_anchor, seed_l)
+    snap_position = position_for(snap_index, num_stops)
+
+    # Second pass: generate every stop using a lightness curve
+    # that passes through the seed's actual lightness at the snap
+    # position. We do this by splitting the curve into two
+    # segments — [light_anchor, seed_l] for stops above the snap,
+    # [seed_l, dark_anchor] for stops at or below — so adjacent
+    # stops transition smoothly through the seed instead of
+    # hitting a cliff.
     generated =
       stops
       |> Enum.with_index()
       |> Enum.map(fn {label, index} ->
-        position = position_for(index, length(stops))
-        l = lerp(light_anchor, dark_anchor, position)
+        position = position_for(index, num_stops)
+
+        l =
+          cond do
+            index < snap_index ->
+              # Above the snap: lerp from light_anchor to seed_l.
+              t = position / snap_position
+              lerp(light_anchor, seed_l, t)
+
+            index == snap_index ->
+              seed_l
+
+            true ->
+              # Below the snap: lerp from seed_l to dark_anchor.
+              remaining = 1.0 - snap_position
+              t = if remaining == 0.0, do: 1.0, else: (position - snap_position) / remaining
+              lerp(seed_l, dark_anchor, t)
+          end
+
         c = base_c * chroma_damping(l)
         h = if hue_drift?, do: drift_hue(base_h, position), else: base_h
 
@@ -142,8 +173,7 @@ defmodule Color.Palette.Tonal do
         {label, mapped, l}
       end)
 
-    seed_l = seed_oklch.l || 0.5
-    seed_stop_label = nearest_stop(generated, seed_l)
+    seed_stop_label = Enum.at(stops, snap_index)
 
     stops_map =
       Enum.into(generated, %{}, fn
@@ -480,11 +510,19 @@ defmodule Color.Palette.Tonal do
   defp clamp01(v) when v > 1.0, do: 1.0
   defp clamp01(v), do: v
 
-  defp nearest_stop(generated, target_l) do
-    {label, _mapped, _l} =
-      Enum.min_by(generated, fn {_label, _mapped, l} -> abs(l - target_l) end)
+  # Returns the index in the stop list whose curve lightness is
+  # closest to the seed's lightness.
+  defp nearest_index(stops, light_anchor, dark_anchor, seed_l) do
+    count = length(stops)
 
-    label
+    stops
+    |> Enum.with_index()
+    |> Enum.min_by(fn {_label, index} ->
+      position = position_for(index, count)
+      curve_l = lerp(light_anchor, dark_anchor, position)
+      abs(curve_l - seed_l)
+    end)
+    |> elem(1)
   end
 
   # ---- options validation -------------------------------------------------
