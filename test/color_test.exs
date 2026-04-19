@@ -18,6 +18,8 @@ defmodule ColorTest do
   doctest Color.XyY
   doctest Color.SRGB
   doctest Color.AdobeRGB
+  doctest Color.AppleRGB
+  doctest Color.Rec2020
   doctest Color.RGB
   doctest Color.HSL
   doctest Color.HSV
@@ -103,6 +105,8 @@ defmodule ColorTest do
       Color.CAM16UCS,
       Color.SRGB,
       Color.AdobeRGB,
+      Color.AppleRGB,
+      Color.Rec2020,
       Color.HSL,
       Color.HSV
     ]
@@ -503,6 +507,8 @@ defmodule ColorTest do
       Color.CAM16UCS,
       Color.SRGB,
       Color.AdobeRGB,
+      Color.AppleRGB,
+      Color.Rec2020,
       Color.HSL,
       Color.HSV
     ]

@@ -196,6 +196,12 @@ defmodule Color.Gamut do
   defp to_working_space_struct(%Color.RGB{} = rgb, :Adobe),
     do: Color.convert(rgb, Color.AdobeRGB)
 
+  defp to_working_space_struct(%Color.RGB{} = rgb, :Apple),
+    do: Color.convert(rgb, Color.AppleRGB)
+
+  defp to_working_space_struct(%Color.RGB{} = rgb, :Rec2020),
+    do: Color.convert(rgb, Color.Rec2020)
+
   defp to_working_space_struct(%Color.RGB{} = rgb, _working_space), do: {:ok, rgb}
 
   defp oklab_delta(oklch_a, oklch_b) do

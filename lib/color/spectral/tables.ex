@@ -399,11 +399,343 @@ defmodule Color.Spectral.Tables do
       end)
   def a, do: @a
 
+  # Illuminants B, C, F2, F7, F11 are tabulated at 10 nm intervals from
+  # 340 nm to 830 nm (50 samples). Values from the standard CIE tables
+  # as reproduced in python-colormath. We store the native 10 nm data
+  # and linearly interpolate onto our 5 nm 380–780 grid at compile time.
+  #
+  # B and C are obsolete daylight simulators (CIE 15.2). F2, F7, F11 are
+  # standard fluorescent illuminants from CIE 15:2004 — F7 is a D65
+  # simulator, F2 a cool white, F11 a narrow-band triphosphor. The
+  # F-series SPDs have emission spikes that are poorly represented at
+  # 10 nm, and linear interpolation does not recover sub-10 nm features.
+  # If you need sub-10 nm accuracy, supply your own SPD.
+
+  @spd_10nm_start 340
+  @spd_10nm_step 10
+
+  @b_10nm [
+    2.40,
+    5.60,
+    9.60,
+    15.20,
+    22.40,
+    31.30,
+    41.30,
+    52.10,
+    63.20,
+    73.10,
+    80.80,
+    85.40,
+    88.30,
+    92.00,
+    95.20,
+    96.50,
+    94.20,
+    90.70,
+    89.50,
+    92.20,
+    96.90,
+    101.00,
+    102.80,
+    102.60,
+    101.00,
+    99.20,
+    98.00,
+    98.50,
+    99.70,
+    101.00,
+    102.20,
+    103.90,
+    105.00,
+    104.90,
+    103.90,
+    101.60,
+    99.10,
+    96.20,
+    92.90,
+    89.40,
+    86.90,
+    85.20,
+    84.70,
+    85.40,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00
+  ]
+
+  @c_10nm [
+    2.70,
+    7.00,
+    12.90,
+    21.40,
+    33.00,
+    47.40,
+    63.30,
+    80.60,
+    98.10,
+    112.40,
+    121.50,
+    124.00,
+    123.10,
+    123.80,
+    123.90,
+    120.70,
+    112.10,
+    102.30,
+    96.90,
+    98.00,
+    102.10,
+    105.20,
+    105.30,
+    102.30,
+    97.80,
+    93.20,
+    89.70,
+    88.40,
+    88.10,
+    88.00,
+    87.80,
+    88.20,
+    87.90,
+    86.30,
+    84.00,
+    80.20,
+    76.30,
+    72.40,
+    68.30,
+    64.40,
+    61.50,
+    59.20,
+    58.10,
+    58.20,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00
+  ]
+
+  @f2_10nm [
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    1.18,
+    1.84,
+    3.44,
+    3.85,
+    4.19,
+    5.06,
+    11.81,
+    6.63,
+    7.19,
+    7.54,
+    7.65,
+    7.62,
+    7.28,
+    7.05,
+    7.16,
+    8.04,
+    10.01,
+    16.64,
+    16.16,
+    18.62,
+    22.79,
+    18.66,
+    16.54,
+    13.80,
+    10.95,
+    8.40,
+    6.31,
+    4.68,
+    3.45,
+    2.55,
+    1.89,
+    1.53,
+    1.10,
+    0.88,
+    0.68,
+    0.56,
+    0.51,
+    0.47,
+    0.46,
+    0.40,
+    0.27,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00
+  ]
+
+  @f7_10nm [
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    2.56,
+    3.84,
+    6.15,
+    7.37,
+    7.71,
+    9.15,
+    17.52,
+    12.00,
+    13.08,
+    13.71,
+    13.95,
+    13.82,
+    13.43,
+    13.08,
+    12.78,
+    12.44,
+    12.26,
+    17.05,
+    12.58,
+    12.83,
+    16.75,
+    12.67,
+    12.19,
+    11.60,
+    11.12,
+    10.76,
+    10.11,
+    10.02,
+    9.87,
+    7.27,
+    5.83,
+    5.04,
+    4.12,
+    3.46,
+    2.73,
+    2.25,
+    1.90,
+    1.62,
+    1.45,
+    1.17,
+    0.81,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00
+  ]
+
+  @f11_10nm [
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.91,
+    0.46,
+    1.29,
+    1.59,
+    2.46,
+    4.49,
+    12.13,
+    7.19,
+    6.72,
+    5.46,
+    5.66,
+    14.96,
+    4.72,
+    1.47,
+    0.89,
+    1.18,
+    39.59,
+    32.61,
+    2.83,
+    1.67,
+    11.28,
+    12.73,
+    7.33,
+    55.27,
+    13.18,
+    12.26,
+    2.07,
+    3.58,
+    2.48,
+    1.54,
+    1.46,
+    2.00,
+    1.35,
+    5.58,
+    0.57,
+    0.23,
+    0.24,
+    0.20,
+    0.32,
+    0.16,
+    0.09,
+    0.00,
+    0.00,
+    0.00,
+    0.00,
+    0.00
+  ]
+
+  # Linearly interpolates a 10 nm list (from @spd_10nm_start to
+  # @spd_10nm_start + 10 · (n - 1) nm) onto the module's 5 nm 380–780 grid.
+  # Samples outside the source range are zero.
+  interpolate_10nm_to_5nm = fn values ->
+    start = @spd_10nm_start
+    step = @spd_10nm_step
+    max_wavelength = start + (length(values) - 1) * step
+    tuple = List.to_tuple(values)
+
+    for lambda <- @wavelengths do
+      lambda_i = :erlang.trunc(lambda)
+
+      cond do
+        lambda_i < start or lambda_i > max_wavelength ->
+          0.0
+
+        true ->
+          offset = lambda_i - start
+          q = div(offset, step)
+          r = offset - q * step
+
+          if r == 0 do
+            :erlang.element(q + 1, tuple)
+          else
+            v1 = :erlang.element(q + 1, tuple)
+            v2 = :erlang.element(q + 2, tuple)
+            v1 + r / step * (v2 - v1)
+          end
+      end
+    end
+  end
+
+  @b interpolate_10nm_to_5nm.(@b_10nm)
+  def b, do: @b
+
+  @c interpolate_10nm_to_5nm.(@c_10nm)
+  def c, do: @c
+
+  @f2 interpolate_10nm_to_5nm.(@f2_10nm)
+  def f2, do: @f2
+
+  @f7 interpolate_10nm_to_5nm.(@f7_10nm)
+  def f7, do: @f7
+
+  @f11 interpolate_10nm_to_5nm.(@f11_10nm)
+  def f11, do: @f11
+
   @illuminants %{
     D65: @d65,
     D50: @d50,
     E: @e,
-    A: @a
+    A: @a,
+    B: @b,
+    C: @c,
+    F2: @f2,
+    F7: @f7,
+    F11: @f11
   }
 
   def illuminants, do: @illuminants

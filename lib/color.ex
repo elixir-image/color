@@ -45,6 +45,11 @@ defmodule Color do
 
   * `Color.AdobeRGB` — companded Adobe RGB (1998) working space (D65).
 
+  * `Color.AppleRGB` — legacy Apple RGB working space (D65, γ = 1.8).
+
+  * `Color.Rec2020` — wide-gamut ITU-R BT.2020 working space (D65,
+    12-bit SDR transfer function).
+
   * `Color.RGB` — linear RGB in any named working space.
 
   * `Color.HSL`, `Color.HSV` — non-linear reparameterisations of sRGB.
@@ -78,6 +83,8 @@ defmodule Color do
   |---|---|---|
   | `:srgb` | `Color.SRGB` | default |
   | `:adobe_rgb` / `:adobe` | `Color.AdobeRGB` | |
+  | `:apple_rgb` / `:apple` | `Color.AppleRGB` | legacy, γ = 1.8 |
+  | `:rec2020` / `:bt2020` | `Color.Rec2020` | wide-gamut UHDTV |
   | `:cmyk` | `Color.CMYK` | 4 or 5 channels |
   | `:hsl` | `Color.HSL` | hue in `[0, 1]` |
   | `:hsv` | `Color.HSV` | hue in `[0, 1]` |
@@ -108,7 +115,7 @@ defmodule Color do
 
   | Category | Spaces | Integer form? | Range check |
   |---|---|---|---|
-  | **Strict display** | `:srgb`, `:adobe_rgb`, `:cmyk` | Yes — `0..255`, scaled to `[0.0, 1.0]` | Strict — each channel must be in its exact range |
+  | **Strict display** | `:srgb`, `:adobe_rgb`, `:apple_rgb`, `:rec2020`, `:cmyk` | Yes — `0..255`, scaled to `[0.0, 1.0]` | Strict — each channel must be in its exact range |
   | **Strict unit cylindrical** | `:hsl`, `:hsv` | No | Strict — all channels in `[0.0, 1.0]`, hue wraps |
   | **Strict deg/percent cylindrical** | `:hsluv`, `:hpluv` | No | Strict — `h` wraps, `s` and `l` must be in `[0, 100]` |
   | **Permissive 3-channel** | `:lab`, `:luv`, `:oklab`, `:jzazbz`, `:ipt`, `:xyz`, `:xyy`, `:ictcp`, `:ycbcr`, `:cam16_ucs` | No | None — accepts wide-gamut / HDR values; rejects `NaN` and `±∞` |
@@ -194,6 +201,8 @@ defmodule Color do
   @type t ::
           Color.SRGB.t()
           | Color.AdobeRGB.t()
+          | Color.AppleRGB.t()
+          | Color.Rec2020.t()
           | Color.RGB.t()
           | Color.Lab.t()
           | Color.LCHab.t()
@@ -233,6 +242,8 @@ defmodule Color do
   @type target ::
           Color.SRGB
           | Color.AdobeRGB
+          | Color.AppleRGB
+          | Color.Rec2020
           | Color.RGB
           | Color.Lab
           | Color.LCHab
@@ -271,6 +282,8 @@ defmodule Color do
     Color.Oklch,
     Color.SRGB,
     Color.AdobeRGB,
+    Color.AppleRGB,
+    Color.Rec2020,
     Color.HSL,
     Color.HSV,
     Color.HSLuv,
@@ -289,6 +302,8 @@ defmodule Color do
   @fixed_illuminant %{
     Color.SRGB => {:D65, 2},
     Color.AdobeRGB => {:D65, 2},
+    Color.AppleRGB => {:D65, 2},
+    Color.Rec2020 => {:D65, 2},
     Color.Oklab => {:D65, 2},
     Color.Oklch => {:D65, 2},
     Color.HSL => {:D65, 2},
@@ -336,15 +351,16 @@ defmodule Color do
   channel, or an HSL/Lab/… alpha channel). `:cmyk` additionally
   accepts **4** or **5** numbers (c, m, y, k, and optionally alpha).
 
-  **Display spaces** (`:srgb`, `:adobe_rgb`, `:cmyk`, `:hsl`, `:hsv`,
-  `:hsluv`, `:hpluv`) are **strict**:
+  **Display spaces** (`:srgb`, `:adobe_rgb`, `:apple_rgb`, `:rec2020`,
+  `:cmyk`, `:hsl`, `:hsv`, `:hsluv`, `:hpluv`) are **strict**:
 
   * All elements must be the same numeric type — either **all
     integers** or **all floats**. Mixing is an error.
 
-  * Integer form is **only accepted** for `:srgb`, `:adobe_rgb` and
-    `:cmyk`, where each channel is assumed to be in `0..255` and is
-    normalised to `[0.0, 1.0]` internally.
+  * Integer form is **only accepted** for `:srgb`, `:adobe_rgb`,
+    `:apple_rgb`, `:rec2020` and `:cmyk`, where each channel is
+    assumed to be in `0..255` and is normalised to `[0.0, 1.0]`
+    internally.
 
   * Each channel is range-checked and a value outside the expected
     range is an error.
@@ -419,6 +435,12 @@ defmodule Color do
     :adobe_rgb => :adobe_rgb,
     :adobe => :adobe_rgb,
     Color.AdobeRGB => :adobe_rgb,
+    :apple_rgb => :apple_rgb,
+    :apple => :apple_rgb,
+    Color.AppleRGB => :apple_rgb,
+    :rec2020 => :rec2020,
+    :bt2020 => :rec2020,
+    Color.Rec2020 => :rec2020,
     :cmyk => :cmyk,
     Color.CMYK => :cmyk,
     :hsl => :hsl,
@@ -522,6 +544,8 @@ defmodule Color do
   # Strict RGB-like
   defp build(:srgb, list), do: strict_rgb(list, Color.SRGB, "sRGB")
   defp build(:adobe_rgb, list), do: strict_rgb(list, Color.AdobeRGB, "Adobe RGB")
+  defp build(:apple_rgb, list), do: strict_rgb(list, Color.AppleRGB, "Apple RGB")
+  defp build(:rec2020, list), do: strict_rgb(list, Color.Rec2020, "Rec. 2020")
 
   # Strict CMYK — 4 or 5 channels
   defp build(:cmyk, list) when length(list) in [4, 5], do: strict_cmyk(list)
@@ -1031,6 +1055,8 @@ defmodule Color do
     case target do
       Color.SRGB -> to_gamut_srgb(converted, :SRGB)
       Color.AdobeRGB -> to_gamut_srgb(converted, :Adobe)
+      Color.AppleRGB -> to_gamut_srgb(converted, :Apple)
+      Color.Rec2020 -> to_gamut_srgb(converted, :Rec2020)
       _ -> {:ok, converted}
     end
   end
@@ -1080,6 +1106,8 @@ defmodule Color do
   def to_xyz(%Color.CAM16UCS{} = c), do: Color.CAM16UCS.to_xyz(c)
   def to_xyz(%Color.SRGB{} = c), do: Color.SRGB.to_xyz(c)
   def to_xyz(%Color.AdobeRGB{} = c), do: Color.AdobeRGB.to_xyz(c)
+  def to_xyz(%Color.AppleRGB{} = c), do: Color.AppleRGB.to_xyz(c)
+  def to_xyz(%Color.Rec2020{} = c), do: Color.Rec2020.to_xyz(c)
   def to_xyz(%Color.RGB{} = c), do: Color.RGB.to_xyz(c)
   def to_xyz(%Color.HSL{} = c), do: Color.HSL.to_xyz(c)
   def to_xyz(%Color.HSV{} = c), do: Color.HSV.to_xyz(c)
@@ -1256,21 +1284,38 @@ defmodule Color do
       %Color.SRGB{r: 1.0, g: 0.5, b: 0.25, alpha: nil}
 
   """
-  @spec premultiply(Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()) ::
-          Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()
+  @spec premultiply(
+          Color.SRGB.t()
+          | Color.AdobeRGB.t()
+          | Color.AppleRGB.t()
+          | Color.Rec2020.t()
+          | Color.RGB.t()
+        ) ::
+          Color.SRGB.t()
+          | Color.AdobeRGB.t()
+          | Color.AppleRGB.t()
+          | Color.Rec2020.t()
+          | Color.RGB.t()
   def premultiply(%Color.SRGB{alpha: nil} = c), do: c
   def premultiply(%Color.SRGB{alpha: a} = c), do: %{c | r: c.r * a, g: c.g * a, b: c.b * a}
 
   def premultiply(%Color.AdobeRGB{alpha: nil} = c), do: c
   def premultiply(%Color.AdobeRGB{alpha: a} = c), do: %{c | r: c.r * a, g: c.g * a, b: c.b * a}
 
+  def premultiply(%Color.AppleRGB{alpha: nil} = c), do: c
+  def premultiply(%Color.AppleRGB{alpha: a} = c), do: %{c | r: c.r * a, g: c.g * a, b: c.b * a}
+
+  def premultiply(%Color.Rec2020{alpha: nil} = c), do: c
+  def premultiply(%Color.Rec2020{alpha: a} = c), do: %{c | r: c.r * a, g: c.g * a, b: c.b * a}
+
   def premultiply(%Color.RGB{alpha: nil} = c), do: c
   def premultiply(%Color.RGB{alpha: a} = c), do: %{c | r: c.r * a, g: c.g * a, b: c.b * a}
 
   def premultiply(%struct{}) do
     raise ArgumentError,
-          "premultiply/1 is only supported for Color.SRGB, Color.AdobeRGB and " <>
-            "Color.RGB (linear). Got #{inspect(struct)}."
+          "premultiply/1 is only supported for Color.SRGB, Color.AdobeRGB, " <>
+            "Color.AppleRGB, Color.Rec2020 and Color.RGB (linear). " <>
+            "Got #{inspect(struct)}."
   end
 
   @doc """
@@ -1295,8 +1340,18 @@ defmodule Color do
       %Color.SRGB{r: 0.0, g: 0.0, b: 0.0, alpha: 0.0}
 
   """
-  @spec unpremultiply(Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()) ::
-          Color.SRGB.t() | Color.AdobeRGB.t() | Color.RGB.t()
+  @spec unpremultiply(
+          Color.SRGB.t()
+          | Color.AdobeRGB.t()
+          | Color.AppleRGB.t()
+          | Color.Rec2020.t()
+          | Color.RGB.t()
+        ) ::
+          Color.SRGB.t()
+          | Color.AdobeRGB.t()
+          | Color.AppleRGB.t()
+          | Color.Rec2020.t()
+          | Color.RGB.t()
   def unpremultiply(%Color.SRGB{alpha: nil} = c), do: c
   def unpremultiply(%Color.SRGB{alpha: a} = c) when a == 0, do: c
   def unpremultiply(%Color.SRGB{alpha: a} = c), do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
@@ -1307,14 +1362,27 @@ defmodule Color do
   def unpremultiply(%Color.AdobeRGB{alpha: a} = c),
     do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
 
+  def unpremultiply(%Color.AppleRGB{alpha: nil} = c), do: c
+  def unpremultiply(%Color.AppleRGB{alpha: a} = c) when a == 0, do: c
+
+  def unpremultiply(%Color.AppleRGB{alpha: a} = c),
+    do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
+
+  def unpremultiply(%Color.Rec2020{alpha: nil} = c), do: c
+  def unpremultiply(%Color.Rec2020{alpha: a} = c) when a == 0, do: c
+
+  def unpremultiply(%Color.Rec2020{alpha: a} = c),
+    do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
+
   def unpremultiply(%Color.RGB{alpha: nil} = c), do: c
   def unpremultiply(%Color.RGB{alpha: a} = c) when a == 0, do: c
   def unpremultiply(%Color.RGB{alpha: a} = c), do: %{c | r: c.r / a, g: c.g / a, b: c.b / a}
 
   def unpremultiply(%struct{}) do
     raise ArgumentError,
-          "unpremultiply/1 is only supported for Color.SRGB, Color.AdobeRGB and " <>
-            "Color.RGB (linear). Got #{inspect(struct)}."
+          "unpremultiply/1 is only supported for Color.SRGB, Color.AdobeRGB, " <>
+            "Color.AppleRGB, Color.Rec2020 and Color.RGB (linear). " <>
+            "Got #{inspect(struct)}."
   end
 
   # ---- migration helpers for Image.Color swap ------------------------------

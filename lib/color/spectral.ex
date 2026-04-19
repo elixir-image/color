@@ -11,7 +11,9 @@ defmodule Color.Spectral do
   The module provides:
 
   * `illuminant/1` — well-known CIE illuminants (`:D65`, `:D50`, `:A`,
-    `:E`) as ready-to-use SPDs.
+    `:B`, `:C`, `:E`, `:F2`, `:F7`, `:F11`) as ready-to-use SPDs.
+
+  * `blackbody/1` — a Planckian (blackbody) SPD at any colour temperature.
 
   * `cmf/1` — the CIE 1931 2° (default) and CIE 1964 10° standard
     observer colour matching functions.
@@ -49,9 +51,17 @@ defmodule Color.Spectral do
   @doc """
   Returns a `Color.Spectral` struct for a named CIE illuminant.
 
+  `:D65`, `:D50` and `:A` are tabulated natively at 5 nm. `:B`, `:C`,
+  `:F2`, `:F7` and `:F11` originate from 10 nm published values and
+  are linearly interpolated onto the 5 nm grid, so they should be
+  treated as reference-grade but not sub-10 nm accurate — in
+  particular the F-series emission spikes are under-represented. For
+  higher precision, pass a user-supplied SPD directly to `to_xyz/2`.
+
   ### Arguments
 
-  * `name` is one of `:D65`, `:D50`, `:A`, `:E`.
+  * `name` is one of `:D65`, `:D50`, `:A`, `:B`, `:C`, `:E`, `:F2`,
+    `:F7`, `:F11`.
 
   ### Returns
 
@@ -68,13 +78,66 @@ defmodule Color.Spectral do
       iex> Enum.uniq(spd.values)
       [100.0]
 
+      iex> spd = Color.Spectral.illuminant(:F7)
+      iex> length(spd.values)
+      81
+
   """
-  @spec illuminant(:D65 | :D50 | :A | :E) :: t()
-  def illuminant(name) when name in [:D65, :D50, :A, :E] do
+  @type illuminant_name :: :D65 | :D50 | :A | :B | :C | :E | :F2 | :F7 | :F11
+
+  @spec illuminant(illuminant_name()) :: t()
+  def illuminant(name) when name in [:D65, :D50, :A, :B, :C, :E, :F2, :F7, :F11] do
     %__MODULE__{
       wavelengths: Tables.wavelengths(),
       values: Map.fetch!(Tables.illuminants(), name)
     }
+  end
+
+  @doc """
+  Returns a Planckian (blackbody) SPD at the given colour temperature.
+
+  The relative spectral power is computed from Planck's law normalised
+  to `100.0` at 560 nm, matching the convention used by the CIE's
+  Illuminant A definition (which is itself a Planckian at 2856 K).
+
+  ### Arguments
+
+  * `temperature` is the colour temperature in kelvin. Must be positive.
+    Typical values: `2700` (warm white LED), `3200` (tungsten),
+    `4000` (neutral), `5000` (horizon), `6504` (D65 equivalent),
+    `10_000` (cool).
+
+  ### Returns
+
+  * A `Color.Spectral` struct with 81 samples at 5 nm from 380 to
+    780 nm.
+
+  ### Examples
+
+      iex> spd = Color.Spectral.blackbody(2856)
+      iex> length(spd.values)
+      81
+
+      iex> spd = Color.Spectral.blackbody(6504)
+      iex> {:ok, xyz} = Color.Spectral.to_xyz(spd)
+      iex> Float.round(xyz.y, 4)
+      1.0
+
+  """
+  @spec blackbody(number()) :: t()
+  def blackbody(temperature) when is_number(temperature) and temperature > 0 do
+    # Planck's second radiation constant in nm·K.
+    c2 = 1.4388e7
+
+    values =
+      for lambda <- Tables.wavelengths() do
+        n = 560.0 / lambda
+        num = :math.exp(c2 / (temperature * 560)) - 1
+        den = :math.exp(c2 / (temperature * lambda)) - 1
+        100.0 * :math.pow(n, 5) * num / den
+      end
+
+    %__MODULE__{wavelengths: Tables.wavelengths(), values: values}
   end
 
   @doc """
@@ -216,8 +279,9 @@ defmodule Color.Spectral do
   * `reflectance` is a `Color.Spectral` struct whose values are in
     `[0.0, 1.0]`.
 
-  * `illuminant_name` is `:D65`, `:D50`, `:A`, or `:E`. Defaults to
-    `:D65`.
+  * `illuminant_name` is one of the atoms accepted by `illuminant/1`
+    (`:D65`, `:D50`, `:A`, `:B`, `:C`, `:E`, `:F2`, `:F7`, `:F11`).
+    Defaults to `:D65`.
 
   * `options` is a keyword list. Supports `:observer` (`2` or `10`,
     default `2`).
@@ -244,7 +308,7 @@ defmodule Color.Spectral do
       {0.9642, 1.0, 0.8251}
 
   """
-  @spec reflectance_to_xyz(t(), :D65 | :D50 | :A | :E, keyword()) :: {:ok, Color.XYZ.t()}
+  @spec reflectance_to_xyz(t(), illuminant_name(), keyword()) :: {:ok, Color.XYZ.t()}
   def reflectance_to_xyz(%__MODULE__{} = reflectance, illuminant_name \\ :D65, options \\ []) do
     observer = Keyword.get(options, :observer, 2)
 
@@ -312,7 +376,7 @@ defmodule Color.Spectral do
       0.0
 
   """
-  @spec metamerism(t(), t(), :D65 | :D50 | :A | :E, :D65 | :D50 | :A | :E) ::
+  @spec metamerism(t(), t(), illuminant_name(), illuminant_name()) ::
           {:ok, float()} | {:error, Exception.t()}
   def metamerism(
         %__MODULE__{} = sample_a,
