@@ -4,14 +4,24 @@ defmodule Color.Palette.Visualizer.TonalView do
   alias Color.Palette.Tonal
   alias Color.Palette.Visualizer.Render
 
+  @gamut_options [
+    {:SRGB, "sRGB"},
+    {:P3_D65, "P3 (D65)"},
+    {:Rec2020, "Rec2020"},
+    {:Adobe, "Adobe RGB"},
+    {:ProPhoto, "ProPhoto"}
+  ]
+
   def render(params, base) do
     seed = Map.get(params, :seed, "#3b82f6")
     hue_drift? = Map.get(params, :hue_drift, false)
+    gamut = Map.get(params, :gamut, :SRGB)
+    chroma_ceiling = Map.get(params, :chroma_ceiling, 1.0)
     name = Map.get(params, :name)
     error = Map.get(params, :error)
 
     body =
-      case build(seed, hue_drift?, name) do
+      case build(seed, hue_drift?, gamut, chroma_ceiling, name) do
         {:ok, palette} -> success_body(palette)
         {:error, message} -> ["<div class=\"vz-error\">", Render.escape(message), "</div>"]
       end
@@ -23,16 +33,39 @@ defmodule Color.Palette.Visualizer.TonalView do
       body: body,
       error: error,
       base: base,
-      extra_fields: [
-        "<label><input type=\"checkbox\" name=\"hue_drift\" value=\"1\"",
-        if(hue_drift?, do: " checked", else: ""),
-        "> hue drift</label>"
-      ]
+      extra_fields: extra_fields(hue_drift?, gamut, chroma_ceiling)
     )
   end
 
-  defp build(seed, hue_drift?, name) do
-    options = [hue_drift: hue_drift?]
+  defp extra_fields(hue_drift?, gamut, chroma_ceiling) do
+    [
+      "<label>gamut <select name=\"gamut\">",
+      Enum.map(@gamut_options, fn {atom, label} ->
+        selected = if atom == gamut, do: " selected", else: ""
+        ["<option value=\"", Atom.to_string(atom), "\"", selected, ">", label, "</option>"]
+      end),
+      "</select></label>",
+      "<label>chroma ceiling <input type=\"number\" name=\"chroma_ceiling\"",
+      " min=\"0.1\" max=\"1.0\" step=\"0.05\" value=\"",
+      format_ceiling(chroma_ceiling),
+      "\"></label>",
+      "<label><input type=\"checkbox\" name=\"hue_drift\" value=\"1\"",
+      if(hue_drift?, do: " checked", else: ""),
+      "> hue drift</label>"
+    ]
+  end
+
+  defp format_ceiling(value) when is_float(value), do: :erlang.float_to_binary(value, decimals: 2)
+  defp format_ceiling(value) when is_integer(value), do: Integer.to_string(value)
+  defp format_ceiling(value), do: to_string(value)
+
+  defp build(seed, hue_drift?, gamut, chroma_ceiling, name) do
+    options = [
+      hue_drift: hue_drift?,
+      gamut: gamut,
+      chroma_ceiling: chroma_ceiling
+    ]
+
     options = if name, do: [{:name, name} | options], else: options
     {:ok, Tonal.new(seed, options)}
   rescue

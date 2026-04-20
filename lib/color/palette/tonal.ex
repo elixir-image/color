@@ -30,12 +30,23 @@ defmodule Color.Palette.Tonal do
      human vision perceives lightness — a phenomenon known as the
      Hunt effect — and gives the scale a more natural feel.
 
-  5. **Snap to seed**. Find the generated stop whose lightness is
+  5. **Cap to a fraction of the gamut envelope**. When
+     `:chroma_ceiling` is below `1.0`, cap each stop's chroma at
+     `ceiling × max_chroma(L, H, gamut)`. This produces a more
+     muted ramp that sits strictly inside the gamut boundary
+     instead of hugging it. At the default `1.0` this step is a
+     no-op.
+
+  6. **Snap to seed**. Find the generated stop whose lightness is
      closest to the seed's lightness and replace it with the seed
      itself. The `:seed_stop` field on the resulting struct
-     records which stop received the seed.
+     records which stop received the seed. Note that when
+     `:chroma_ceiling` is below `1.0` and the seed sits near the
+     gamut boundary, the seed will be visibly more saturated than
+     its capped neighbours — pick a wider `:gamut` instead if you
+     want a smoother ramp without muting the seed.
 
-  6. **Gamut-map** each stop into the requested working space
+  7. **Gamut-map** each stop into the requested working space
      (default `:SRGB`) using the CSS Color 4 Oklch binary-search
      algorithm provided by `Color.Gamut.to_gamut/3`.
 
@@ -51,11 +62,11 @@ defmodule Color.Palette.Tonal do
 
       iex> palette = Color.Palette.Tonal.new("#3b82f6")
       iex> Map.fetch!(palette.stops, 50) |> Color.to_hex()
-      "#f4f9ff"
+      "#f5f9ff"
 
       iex> palette = Color.Palette.Tonal.new("#3b82f6")
       iex> Map.fetch!(palette.stops, 950) |> Color.to_hex()
-      "#000825"
+      "#000827"
 
   """
 
@@ -123,12 +134,20 @@ defmodule Color.Palette.Tonal do
     dark_anchor = Keyword.fetch!(options, :dark_anchor)
     hue_drift? = Keyword.fetch!(options, :hue_drift)
     gamut = Keyword.fetch!(options, :gamut)
+    chroma_ceiling = Keyword.fetch!(options, :chroma_ceiling)
 
     base_h = seed_oklch.h || 0.0
     base_c = seed_oklch.c || 0.0
 
     seed_l = seed_oklch.l || 0.5
     num_stops = length(stops)
+
+    # Normalise the chroma ceiling so the damping curve passes
+    # through the seed's chroma at the seed's lightness. Without
+    # this, generated neighbours are damped by sin(π · L) while the
+    # seed itself keeps its raw chroma, leaving the seed visibly
+    # more saturated than its neighbours.
+    peak_c = peak_chroma(base_c, seed_l)
 
     # First pass: find which stop the seed would snap to, and
     # compute the curve lightness at that position.
@@ -165,8 +184,15 @@ defmodule Color.Palette.Tonal do
               lerp(seed_l, dark_anchor, t)
           end
 
-        c = base_c * chroma_damping(l)
+        curve_c = peak_c * chroma_damping(l)
         h = if hue_drift?, do: drift_hue(base_h, position), else: base_h
+
+        c =
+          if chroma_ceiling < 1.0 do
+            min(curve_c, chroma_ceiling * max_chroma_at(l, h, gamut))
+          else
+            curve_c
+          end
 
         oklch = %Color.Oklch{l: l, c: c, h: h, alpha: seed_srgb.alpha}
         {:ok, mapped} = Color.Gamut.to_gamut(oklch, gamut)
@@ -475,6 +501,38 @@ defmodule Color.Palette.Tonal do
   # and dark shades don't blow past the sRGB gamut.
   defp chroma_damping(l), do: :math.sin(:math.pi() * clamp01(l))
 
+  # Solve for the pre-damping chroma ceiling that makes
+  # `peak_c · chroma_damping(seed_l) = seed_c`. Floor the divisor
+  # so seeds with extreme lightness don't blow peak_c up to
+  # unreasonable values.
+  @min_seed_damping 0.05
+  defp peak_chroma(base_c, seed_l) do
+    damping = chroma_damping(seed_l)
+    if damping > @min_seed_damping, do: base_c / damping, else: base_c
+  end
+
+  # Binary-search for the maximum chroma that is in gamut at the
+  # given lightness and hue, for the given working space. Used
+  # only when :chroma_ceiling is below 1.0.
+  @max_chroma_search_upper 0.5
+  @max_chroma_search_iters 25
+  defp max_chroma_at(l, h, gamut) do
+    do_max_chroma_search(l, h, gamut, 0.0, @max_chroma_search_upper, @max_chroma_search_iters)
+  end
+
+  defp do_max_chroma_search(_l, _h, _gamut, lo, _hi, 0), do: lo
+
+  defp do_max_chroma_search(l, h, gamut, lo, hi, iters) do
+    mid = (lo + hi) / 2
+    test = %Color.Oklch{l: l, c: mid, h: h, alpha: 1.0}
+
+    if Color.Gamut.in_gamut?(test, gamut) do
+      do_max_chroma_search(l, h, gamut, mid, hi, iters - 1)
+    else
+      do_max_chroma_search(l, h, gamut, lo, mid, iters - 1)
+    end
+  end
+
   # Drift hue toward yellow at the light end and toward blue at
   # the dark end. The drift amount is small (a few degrees) and
   # scales with distance from the midpoint.
@@ -527,7 +585,15 @@ defmodule Color.Palette.Tonal do
 
   # ---- options validation -------------------------------------------------
 
-  @valid_keys [:stops, :light_anchor, :dark_anchor, :hue_drift, :gamut, :name]
+  @valid_keys [
+    :stops,
+    :light_anchor,
+    :dark_anchor,
+    :hue_drift,
+    :gamut,
+    :chroma_ceiling,
+    :name
+  ]
 
   defp validate_options!(options) do
     Enum.each(Keyword.keys(options), fn key ->
@@ -545,6 +611,7 @@ defmodule Color.Palette.Tonal do
       |> Keyword.put_new(:dark_anchor, @default_dark_anchor)
       |> Keyword.put_new(:hue_drift, false)
       |> Keyword.put_new(:gamut, :SRGB)
+      |> Keyword.put_new(:chroma_ceiling, 1.0)
 
     stops = Keyword.fetch!(options, :stops)
 
@@ -587,6 +654,14 @@ defmodule Color.Palette.Tonal do
       raise Color.PaletteError,
         reason: :invalid_anchor,
         detail: ":light_anchor (#{light}) must be greater than :dark_anchor (#{dark})"
+    end
+
+    ceiling = Keyword.fetch!(options, :chroma_ceiling)
+
+    unless is_number(ceiling) and ceiling > 0.0 and ceiling <= 1.0 do
+      raise Color.PaletteError,
+        reason: :invalid_chroma_ceiling,
+        detail: ":chroma_ceiling must be a number in (0.0, 1.0]"
     end
 
     options

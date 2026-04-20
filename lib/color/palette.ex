@@ -72,7 +72,16 @@ defmodule Color.Palette do
     matching how human vision perceives lightness. Default `false`.
 
   * `:gamut` is the working space to gamut-map each stop into,
-    default `:SRGB`.
+    default `:SRGB`. Widening the gamut (for example `:P3_D65` or
+    `:Rec2020`) gives non-seed stops more chroma headroom and
+    produces a smoother ramp for saturated seeds, at the cost of
+    colours that may not display accurately on sRGB-only monitors.
+
+  * `:chroma_ceiling` is a float in `(0.0, 1.0]` that caps each
+    stop's chroma at `ceiling × max_chroma(L, H, gamut)`. The
+    default `1.0` lets stops hug the gamut boundary. Lowering it
+    (for example `0.85`) produces a more muted, evenly
+    saturated-looking ramp.
 
   * `:name` is an optional string label stored on the struct.
 

@@ -138,6 +138,8 @@ defmodule Color.Palette.Visualizer do
       %{
         seed: resolve_seed(params, "#3b82f6"),
         hue_drift: truthy?(Map.get(params, "hue_drift")),
+        gamut: gamut_atom(Map.get(params, "gamut")) || :SRGB,
+        chroma_ceiling: number_default(Map.get(params, "chroma_ceiling"), 1.0),
         name: Map.get(params, "name") |> blank_default(nil)
       }
     end
