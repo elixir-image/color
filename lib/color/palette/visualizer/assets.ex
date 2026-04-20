@@ -101,9 +101,9 @@ defmodule Color.Palette.Visualizer.Assets do
   form.vz-form {
     display: flex;
     gap: 8px;
-    margin-left: auto;
     align-items: center;
     flex-wrap: wrap;
+    flex-basis: 100%;
   }
 
   form.vz-form label { color: var(--vz-text-dim); font-size: 12px; }
