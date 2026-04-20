@@ -10,6 +10,8 @@ All notable changes to this project are documented here. The format is based on 
 
 * Drop seed label on gamut plot and add white-point legend entry.
 
+* Propagate palette gamut and ceiling between tonal and gamut tabs
+
 ## [0.10.0] — April 19th, 2026
 
 ### Added
