@@ -55,10 +55,9 @@ defmodule Color.Gamut.SVGTest do
       refute svg =~ "stroke-dasharray=\"3,3\""
     end
 
-    test "seed overlay plots a labelled dot" do
+    test "seed overlay plots a dot filled with the seed colour" do
       svg = SVG.render(seed: "#ff0000")
-      assert svg =~ ~s(>seed</text>)
-      assert svg =~ "#ff0000"
+      assert svg =~ ~s(fill="#ff0000")
     end
 
     test "palette overlay adds a circle per stop with <title>" do

@@ -239,12 +239,12 @@ defmodule Color.Palette.VisualizerTest do
       assert on.resp_body =~ "stroke-dasharray=\"3,3\""
     end
 
-    test "overlay_seed plots a seed dot with label" do
+    test "overlay_seed plots a seed dot and adds a legend entry" do
       conn =
         conn(:get, "/gamut?overlay_seed=1&seed=%23ff0000&submitted=1")
         |> Color.Palette.Visualizer.call(@opts)
 
-      assert conn.resp_body =~ ~s(>seed</text>)
+      assert conn.resp_body =~ ~s(fill="#ff0000")
       assert conn.resp_body =~ "Seed:"
     end
 

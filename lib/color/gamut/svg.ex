@@ -321,9 +321,7 @@ defmodule Color.Gamut.SVG do
 
     [
       "<circle cx=\"#{fmt(px)}\" cy=\"#{fmt(py)}\" r=\"7\" fill=\"#{hex}\" ",
-      "stroke=\"#fff\" stroke-width=\"2\" />",
-      "<text x=\"#{fmt(px + 10)}\" y=\"#{fmt(py + 4)}\" fill=\"#fff\" font-size=\"11\" ",
-      "font-family=\"ui-monospace,monospace\">seed</text>"
+      "stroke=\"#fff\" stroke-width=\"2\" />"
     ]
   end
 

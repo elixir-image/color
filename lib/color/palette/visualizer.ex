@@ -196,9 +196,21 @@ defmodule Color.Palette.Visualizer do
         projection: atom_default(Map.get(params, "projection"), [:xy, :uv], :uv),
         gamuts: gamuts,
         planckian: truthy?(Map.get(params, "planckian")),
-        overlay_seed: truthy?(Map.get(params, "overlay_seed")),
-        overlay_palette: truthy?(Map.get(params, "overlay_palette"))
+        overlay_seed: checkbox_default(params, "overlay_seed", true),
+        overlay_palette: checkbox_default(params, "overlay_palette", true)
       }
+    end
+
+    # A checkbox that defaults to `default_on` on fresh page loads
+    # but respects an explicit unchecked state after a form
+    # submission. We rely on the form's hidden `submitted` field
+    # to distinguish "never submitted" (fall back to default) from
+    # "submitted without this checkbox" (user unchecked it).
+    defp checkbox_default(params, key, default_on) do
+      case Map.get(params, key) do
+        nil -> not Map.has_key?(params, "submitted") and default_on
+        value -> truthy?(value)
+      end
     end
 
     @gamut_atoms %{

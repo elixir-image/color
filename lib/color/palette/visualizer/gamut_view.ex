@@ -168,6 +168,9 @@ defmodule Color.Palette.Visualizer.GamutView do
           ")</span></li>"
         ]
       end),
+      "<li><span class=\"vz-legend-swatch\" ",
+      "style=\"background:#60a5fa;border-radius:50%;border:1px solid rgba(255,255,255,0.4)\"></span>",
+      "White point of each gamut (dot inside its triangle)</li>",
       if show_planck do
         [
           "<li><span class=\"vz-legend-swatch\" style=\"background:#fbbf2433;border:1px dashed #fbbf24\"></span>Planckian locus (1500 – 20 000 K)</li>"
