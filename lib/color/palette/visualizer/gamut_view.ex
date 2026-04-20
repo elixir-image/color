@@ -118,6 +118,11 @@ defmodule Color.Palette.Visualizer.GamutView do
       "<label><input type=\"checkbox\" name=\"overlay_palette\" value=\"1\"",
       if(overlay_palette, do: " checked", else: ""),
       "> Plot tonal palette</label>",
+      # Wrap the palette controls in a full-width flex row with
+      # order: 999 so they visually drop to a new line below the
+      # checkboxes, but the Update button (default order 0,
+      # rendered after extra_fields) stays on the top row.
+      "<div style=\"order:999;flex-basis:100%;display:flex;gap:8px;align-items:center\">",
       "<label>palette gamut <select name=\"palette_gamut\">",
       Enum.map(@palette_gamut_options, fn {atom, label} ->
         selected = if atom == palette_gamut, do: " selected", else: ""
@@ -128,6 +133,7 @@ defmodule Color.Palette.Visualizer.GamutView do
       " min=\"0.1\" max=\"1.0\" step=\"0.05\" value=\"",
       format_ceiling(palette_chroma_ceiling),
       "\"></label>",
+      "</div>",
       "<input type=\"hidden\" name=\"submitted\" value=\"1\">"
     ]
   end
