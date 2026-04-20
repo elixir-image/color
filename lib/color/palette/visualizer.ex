@@ -197,7 +197,9 @@ defmodule Color.Palette.Visualizer do
         gamuts: gamuts,
         planckian: truthy?(Map.get(params, "planckian")),
         overlay_seed: checkbox_default(params, "overlay_seed", true),
-        overlay_palette: checkbox_default(params, "overlay_palette", true)
+        overlay_palette: checkbox_default(params, "overlay_palette", true),
+        palette_gamut: gamut_atom(Map.get(params, "palette_gamut")) || :SRGB,
+        palette_chroma_ceiling: number_default(Map.get(params, "palette_chroma_ceiling"), 1.0)
       }
     end
 

@@ -30,6 +30,7 @@ defmodule Color.Palette.Visualizer.Render do
     error = Keyword.get(assigns, :error)
     base = Keyword.fetch!(assigns, :base)
     extra_fields = Keyword.get(assigns, :extra_fields, [])
+    tab_params = Keyword.get(assigns, :tab_params, %{})
 
     [
       "<!doctype html><html lang=\"en\"><head>",
@@ -42,7 +43,7 @@ defmodule Color.Palette.Visualizer.Render do
       escape(base),
       "/assets/style.css\">",
       "</head><body>",
-      header(active, seed, base, extra_fields),
+      header(active, seed, base, extra_fields, tab_params),
       "<main class=\"vz-main\">",
       error_block(error),
       body,
@@ -51,7 +52,7 @@ defmodule Color.Palette.Visualizer.Render do
     ]
   end
 
-  defp header(active, seed, base, extra_fields) do
+  defp header(active, seed, base, extra_fields, tab_params) do
     tabs = [
       {"tonal", "Tonal"},
       {"theme", "Theme"},
@@ -73,14 +74,15 @@ defmodule Color.Palette.Visualizer.Render do
       "<nav class=\"vz-tabs\">",
       Enum.map(tabs, fn {path, label} ->
         cls = if path == active, do: "active", else: ""
+        extras = Map.get(tab_params, path, %{})
+        query = tab_query_string(seed, extras)
 
         [
           "<a href=\"",
           escape(base),
           "/",
           path,
-          "?seed=",
-          URI.encode_www_form(seed),
+          query,
           "\" class=\"",
           cls,
           "\">",
@@ -107,6 +109,27 @@ defmodule Color.Palette.Visualizer.Render do
       "</form>",
       "</header>"
     ]
+  end
+
+  # Builds the `?seed=…&k=v&…` query string appended to each tab's
+  # nav link. The seed is always included; callers can supply
+  # per-tab extras (e.g., palette_gamut) via the `tab_params` map
+  # on `Render.page/1`.
+  defp tab_query_string(seed, extras) when extras == %{} do
+    "?seed=" <> URI.encode_www_form(seed)
+  end
+
+  defp tab_query_string(seed, extras) do
+    base = "?seed=" <> URI.encode_www_form(seed)
+
+    extra_pairs =
+      extras
+      |> Enum.map(fn {k, v} ->
+        URI.encode_www_form(to_string(k)) <> "=" <> URI.encode_www_form(to_string(v))
+      end)
+      |> Enum.join("&")
+
+    base <> "&" <> extra_pairs
   end
 
   @doc """

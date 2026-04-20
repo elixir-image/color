@@ -33,7 +33,13 @@ defmodule Color.Palette.Visualizer.TonalView do
       body: body,
       error: error,
       base: base,
-      extra_fields: extra_fields(hue_drift?, gamut, chroma_ceiling)
+      extra_fields: extra_fields(hue_drift?, gamut, chroma_ceiling),
+      tab_params: %{
+        "gamut" => %{
+          "palette_gamut" => Atom.to_string(gamut),
+          "palette_chroma_ceiling" => format_ceiling(chroma_ceiling)
+        }
+      }
     )
   end
 

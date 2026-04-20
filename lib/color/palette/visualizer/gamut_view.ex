@@ -13,17 +13,39 @@ defmodule Color.Palette.Visualizer.GamutView do
     {:ProPhoto, "ProPhoto RGB", "#f43f5e", false}
   ]
 
+  # Palette-gamut dropdown options — mirrors TonalView so the
+  # gamut view can reproduce the same tonal palette the Tonal tab
+  # would generate.
+  @palette_gamut_options [
+    {:SRGB, "sRGB"},
+    {:P3_D65, "P3 (D65)"},
+    {:Rec2020, "Rec2020"},
+    {:Adobe, "Adobe RGB"},
+    {:ProPhoto, "ProPhoto"}
+  ]
+
   def render(params, base) do
     projection = Map.get(params, :projection, :uv)
     enabled = Map.get(params, :gamuts, default_gamuts())
     show_planck = Map.get(params, :planckian, true)
     overlay_seed = Map.get(params, :overlay_seed, true)
     overlay_palette = Map.get(params, :overlay_palette, false)
+    palette_gamut = Map.get(params, :palette_gamut, :SRGB)
+    palette_chroma_ceiling = Map.get(params, :palette_chroma_ceiling, 1.0)
     seed = Map.get(params, :seed, "#3b82f6")
 
     body =
       try do
-        success_body(projection, enabled, show_planck, overlay_seed, overlay_palette, seed)
+        success_body(
+          projection,
+          enabled,
+          show_planck,
+          overlay_seed,
+          overlay_palette,
+          seed,
+          palette_gamut,
+          palette_chroma_ceiling
+        )
       rescue
         e ->
           ["<div class=\"vz-error\">", Render.escape(Exception.message(e)), "</div>"]
@@ -35,7 +57,22 @@ defmodule Color.Palette.Visualizer.GamutView do
       seed: seed,
       body: body,
       base: base,
-      extra_fields: extra_fields(projection, enabled, show_planck, overlay_seed, overlay_palette)
+      extra_fields:
+        extra_fields(
+          projection,
+          enabled,
+          show_planck,
+          overlay_seed,
+          overlay_palette,
+          palette_gamut,
+          palette_chroma_ceiling
+        ),
+      tab_params: %{
+        "tonal" => %{
+          "gamut" => Atom.to_string(palette_gamut),
+          "chroma_ceiling" => format_ceiling(palette_chroma_ceiling)
+        }
+      }
     )
   end
 
@@ -43,7 +80,15 @@ defmodule Color.Palette.Visualizer.GamutView do
     for {atom, _label, _colour, default?} <- @working_spaces, default?, do: atom
   end
 
-  defp extra_fields(projection, enabled, show_planck, overlay_seed, overlay_palette) do
+  defp extra_fields(
+         projection,
+         enabled,
+         show_planck,
+         overlay_seed,
+         overlay_palette,
+         palette_gamut,
+         palette_chroma_ceiling
+       ) do
     [
       "<label>proj <select name=\"projection\">",
       option("uv", "u′v′ (CIE 1976)", projection == :uv),
@@ -73,9 +118,23 @@ defmodule Color.Palette.Visualizer.GamutView do
       "<label><input type=\"checkbox\" name=\"overlay_palette\" value=\"1\"",
       if(overlay_palette, do: " checked", else: ""),
       "> Plot tonal palette</label>",
+      "<label>palette gamut <select name=\"palette_gamut\">",
+      Enum.map(@palette_gamut_options, fn {atom, label} ->
+        selected = if atom == palette_gamut, do: " selected", else: ""
+        ["<option value=\"", Atom.to_string(atom), "\"", selected, ">", label, "</option>"]
+      end),
+      "</select></label>",
+      "<label>palette ceiling <input type=\"number\" name=\"palette_chroma_ceiling\"",
+      " min=\"0.1\" max=\"1.0\" step=\"0.05\" value=\"",
+      format_ceiling(palette_chroma_ceiling),
+      "\"></label>",
       "<input type=\"hidden\" name=\"submitted\" value=\"1\">"
     ]
   end
+
+  defp format_ceiling(value) when is_float(value), do: :erlang.float_to_binary(value, decimals: 2)
+  defp format_ceiling(value) when is_integer(value), do: Integer.to_string(value)
+  defp format_ceiling(value), do: to_string(value)
 
   defp option(value, label, selected?) do
     [
@@ -89,8 +148,20 @@ defmodule Color.Palette.Visualizer.GamutView do
     ]
   end
 
-  defp success_body(projection, enabled, show_planck, overlay_seed, overlay_palette, seed) do
-    palette = if overlay_palette, do: safe_tonal(seed), else: nil
+  defp success_body(
+         projection,
+         enabled,
+         show_planck,
+         overlay_seed,
+         overlay_palette,
+         seed,
+         palette_gamut,
+         palette_chroma_ceiling
+       ) do
+    palette =
+      if overlay_palette,
+        do: safe_tonal(seed, palette_gamut, palette_chroma_ceiling),
+        else: nil
 
     svg_binary =
       Color.Gamut.SVG.render(
@@ -120,8 +191,8 @@ defmodule Color.Palette.Visualizer.GamutView do
     ]
   end
 
-  defp safe_tonal(seed) do
-    Color.Palette.Tonal.new(seed)
+  defp safe_tonal(seed, gamut, chroma_ceiling) do
+    Color.Palette.Tonal.new(seed, gamut: gamut, chroma_ceiling: chroma_ceiling)
   rescue
     _ -> nil
   end
