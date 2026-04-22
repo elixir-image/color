@@ -7,7 +7,9 @@ defmodule Color.PaletteTest do
   doctest Color.Palette.Contrast
   doctest Color.Palette.ContrastScale
   doctest Color.Palette.Sort
+  doctest Color.Material
 
+  alias Color.Material
   alias Color.Palette
   alias Color.Palette.Contrast
   alias Color.Palette.ContrastScale
@@ -1153,6 +1155,179 @@ defmodule Color.PaletteTest do
     test "delegates to Sort.sort/2" do
       hexes = ["#0000ff", "#ff0000"]
       assert Palette.sort(hexes) == Sort.sort(hexes)
+    end
+  end
+
+  describe "Color.Material" do
+    test "accepts hex inputs and stores normalised SRGB" do
+      mat = Material.new("#ff0000", metallic: 1.0, roughness: 0.3)
+
+      assert %Color.SRGB{} = mat.base_color
+      assert Color.to_hex(mat.base_color) == "#ff0000"
+      assert mat.metallic == 1.0
+      assert mat.roughness == 0.3
+    end
+
+    test "accepts CSS named colours" do
+      mat = Material.new("saddlebrown")
+      assert Color.to_hex(mat.base_color) == "#8b4513"
+    end
+
+    test "accepts a pre-parsed SRGB struct" do
+      {:ok, red} = Color.new("#ff0000")
+      mat = Material.new(red, name: "red plastic")
+
+      assert mat.base_color == red
+      assert mat.name == "red plastic"
+    end
+
+    test "applies sensible defaults" do
+      mat = Material.new("#888888")
+
+      assert mat.metallic == 0.0
+      assert mat.roughness == 0.5
+      assert mat.clearcoat == 0.0
+      assert mat.clearcoat_roughness == 0.03
+      assert mat.name == nil
+    end
+
+    test "rejects metallic outside [0, 1]" do
+      assert_raise Color.PaletteError, ~r/metallic/, fn ->
+        Material.new("#ff0000", metallic: 1.5)
+      end
+    end
+
+    test "rejects roughness outside [0, 1]" do
+      assert_raise Color.PaletteError, ~r/roughness/, fn ->
+        Material.new("#ff0000", roughness: -0.1)
+      end
+    end
+
+    test "rejects unknown options" do
+      assert_raise Color.PaletteError, ~r/unknown/, fn ->
+        Material.new("#ff0000", bogus: 1)
+      end
+    end
+
+    test "to_pbr_tuple returns bucket 1 for a pure metal" do
+      mat = Material.new("#c0c0c0", metallic: 1.0, roughness: 0.2)
+      {bucket, _h, _l, rough} = Material.to_pbr_tuple(mat)
+
+      assert bucket == 1
+      assert rough == 0.2
+    end
+
+    test "to_pbr_tuple respects a custom metallic_threshold" do
+      mat = Material.new("#c0c0c0", metallic: 0.4)
+      assert {0, _, _, _} = Material.to_pbr_tuple(mat)
+      assert {1, _, _, _} = Material.to_pbr_tuple(mat, metallic_threshold: 0.3)
+    end
+  end
+
+  describe "Sort.sort/2 — :material_pbr" do
+    test "dielectrics come before metals by default" do
+      plastic = Material.new("#ff0000", metallic: 0.0, roughness: 0.6, name: "plastic")
+      metal = Material.new("#ffd700", metallic: 1.0, roughness: 0.05, name: "metal")
+
+      assert [^plastic, ^metal] =
+               Sort.sort([metal, plastic], strategy: :material_pbr)
+    end
+
+    test ":metals :before flips bucket order" do
+      plastic = Material.new("#ff0000", metallic: 0.0, name: "plastic")
+      metal = Material.new("#ffd700", metallic: 1.0, name: "metal")
+
+      assert [^metal, ^plastic] =
+               Sort.sort([plastic, metal], strategy: :material_pbr, metals: :before)
+    end
+
+    test "within a single bucket, colours sort by hue then lightness" do
+      red_plastic = Material.new("#ff0000", name: "red")
+      green_plastic = Material.new("#00ff00", name: "green")
+      blue_plastic = Material.new("#0000ff", name: "blue")
+
+      names =
+        [blue_plastic, red_plastic, green_plastic]
+        |> Sort.sort(strategy: :material_pbr)
+        |> Enum.map(& &1.name)
+
+      assert names == ["red", "green", "blue"]
+    end
+
+    test "gloss tiebreaker: same base colour, glossy first by default" do
+      gloss = Material.new("#ff0000", roughness: 0.05, name: "gloss")
+      matte = Material.new("#ff0000", roughness: 0.9, name: "matte")
+
+      assert [%Material{name: "gloss"}, %Material{name: "matte"}] =
+               Sort.sort([matte, gloss], strategy: :material_pbr)
+    end
+
+    test ":roughness_order :matte_first reverses the gloss tiebreaker" do
+      gloss = Material.new("#ff0000", roughness: 0.05, name: "gloss")
+      matte = Material.new("#ff0000", roughness: 0.9, name: "matte")
+
+      assert [%Material{name: "matte"}, %Material{name: "gloss"}] =
+               Sort.sort([gloss, matte],
+                 strategy: :material_pbr,
+                 roughness_order: :matte_first
+               )
+    end
+
+    test "metallic_threshold controls bucket assignment" do
+      borderline = Material.new("#c0c0c0", metallic: 0.4, name: "semi")
+      clear_plastic = Material.new("#ff0000", metallic: 0.0, name: "plastic")
+
+      # Default threshold 0.5 → borderline stays in dielectric bucket.
+      # Within dielectrics the gray sub-bucket (semi) comes before
+      # the chromatic sub-bucket (plastic) under `:grays :before`.
+      assert [%Material{name: "semi"}, %Material{name: "plastic"}] =
+               Sort.sort([borderline, clear_plastic], strategy: :material_pbr)
+
+      # Lower threshold to 0.3 → borderline crosses into the metal
+      # bucket, which (with `:metals :after`) lands last.
+      assert [%Material{name: "plastic"}, %Material{name: "semi"}] =
+               Sort.sort([borderline, clear_plastic],
+                 strategy: :material_pbr,
+                 metallic_threshold: 0.3
+               )
+    end
+
+    test "mixed plain-colour + material list works" do
+      hex = "#0000ff"
+      red_mat = Material.new("#ff0000", name: "red mat")
+      gold = Material.new("#ffd700", metallic: 1.0, name: "gold")
+
+      sorted = Sort.sort([gold, hex, red_mat], strategy: :material_pbr)
+
+      # Red-material (dielectric) first, blue hex (plain → dielectric)
+      # second, gold metal last.
+      assert [%Material{name: "red mat"}, %Color.SRGB{} = blue, %Material{name: "gold"}] = sorted
+
+      assert Color.to_hex(blue) == "#0000ff"
+    end
+
+    test "preserves Material structs in output" do
+      mat = Material.new("#ff0000", name: "red")
+
+      assert [%Material{name: "red"}] = Sort.sort([mat], strategy: :material_pbr)
+    end
+
+    test "rejects metallic_threshold outside (0, 1]" do
+      assert_raise Color.PaletteError, ~r/metallic_threshold/, fn ->
+        Sort.sort(["#ff0000"], strategy: :material_pbr, metallic_threshold: 0.0)
+      end
+    end
+
+    test "rejects invalid :metals value" do
+      assert_raise Color.PaletteError, ~r/metals/, fn ->
+        Sort.sort(["#ff0000"], strategy: :material_pbr, metals: :middle)
+      end
+    end
+
+    test "rejects invalid :roughness_order" do
+      assert_raise Color.PaletteError, ~r/roughness_order/, fn ->
+        Sort.sort(["#ff0000"], strategy: :material_pbr, roughness_order: :loudest_first)
+      end
     end
   end
 end

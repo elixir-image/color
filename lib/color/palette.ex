@@ -31,8 +31,12 @@ defmodule Color.Palette do
 
   * `sort/2` — orders an arbitrary list of colours into a
     perceptually-sensible sequence (rainbow, stepped-hue grid,
-    or lightness ramp). Useful when you have a heterogeneous
-    bag of swatches and need a human-readable layout.
+    lightness ramp, or material-aware PBR order). Useful when
+    you have a heterogeneous bag of swatches and need a
+    human-readable layout. When the input mixes
+    `%Color.Material{}` structs (plastic, metal, ceramic), the
+    `:material_pbr` strategy splits dielectrics from metals
+    before colour-sorting each bucket.
 
   ## Working space
 
