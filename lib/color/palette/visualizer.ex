@@ -66,6 +66,7 @@ defmodule Color.Palette.Visualizer do
     alias Color.Palette.Visualizer.ContrastScaleView
     alias Color.Palette.Visualizer.ContrastView
     alias Color.Palette.Visualizer.GamutView
+    alias Color.Palette.Visualizer.SortView
     alias Color.Palette.Visualizer.ThemeView
     alias Color.Palette.Visualizer.TonalView
 
@@ -100,6 +101,11 @@ defmodule Color.Palette.Visualizer do
     get "/gamut" do
       params = parse_params(conn.params, :gamut)
       html(conn, GamutView.render(params, base_path(conn)))
+    end
+
+    get "/sort" do
+      params = parse_params(conn.params, :sort)
+      html(conn, SortView.render(params, base_path(conn)))
     end
 
     get "/assets/style.css" do
@@ -202,6 +208,38 @@ defmodule Color.Palette.Visualizer do
         palette_chroma_ceiling: number_default(Map.get(params, "palette_chroma_ceiling"), 1.0)
       }
     end
+
+    # The sort view: textarea of colours plus strategy knobs.
+    # The textarea can ride in the URL for sharing, but realistically
+    # most users will submit via the form each time.
+    defp parse_params(params, :sort) do
+      %{
+        seed: resolve_seed(params, "#3b82f6"),
+        colors: Map.get(params, "colors") |> blank_default(SortView.default_colors_text()),
+        strategy:
+          atom_default(
+            Map.get(params, "strategy"),
+            [:hue_lightness, :stepped_hue, :lightness],
+            :hue_lightness
+          ),
+        chroma_threshold: number_default(Map.get(params, "chroma_threshold"), 0.02),
+        hue_origin: number_default(Map.get(params, "hue_origin"), 0.0),
+        grays: atom_default(Map.get(params, "grays"), [:before, :after, :exclude], :before),
+        buckets: integer_default(Map.get(params, "buckets"), 8)
+      }
+    end
+
+    defp integer_default(nil, default), do: default
+    defp integer_default("", default), do: default
+
+    defp integer_default(value, default) when is_binary(value) do
+      case Integer.parse(value) do
+        {n, ""} -> n
+        _ -> default
+      end
+    end
+
+    defp integer_default(_, default), do: default
 
     # A checkbox that defaults to `default_on` on fresh page loads
     # but respects an explicit unchecked state after a form

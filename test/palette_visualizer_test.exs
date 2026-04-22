@@ -369,6 +369,76 @@ defmodule Color.Palette.VisualizerTest do
     end
   end
 
+  describe "sort view" do
+    test "GET /sort renders the default palette in rainbow order" do
+      conn = conn(:get, "/sort") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      # The textarea and strategy selector must be present.
+      assert conn.resp_body =~ ~s(<textarea name="colors")
+      assert conn.resp_body =~ ~s(name="strategy")
+      # The default colour set should include both hex and
+      # named-colour forms in the textarea contents.
+      assert conn.resp_body =~ "#ff0000"
+      assert conn.resp_body =~ "saddlebrown"
+      # The sorted section header is emitted.
+      assert conn.resp_body =~ ~s(>Sorted ()
+    end
+
+    test "user-supplied colors are sorted into rainbow order" do
+      colors = "#0000ff\n#ff0000\n#00ff00"
+
+      conn =
+        conn(:get, "/sort?colors=" <> URI.encode_www_form(colors))
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      # The sorted strip should place red before green before
+      # blue (primaries in rainbow order).
+      sorted_section = isolate_sorted_section(conn.resp_body)
+      red_at = :binary.match(sorted_section, "#ff0000") |> elem(0)
+      green_at = :binary.match(sorted_section, "#00ff00") |> elem(0)
+      blue_at = :binary.match(sorted_section, "#0000ff") |> elem(0)
+      assert red_at < green_at
+      assert green_at < blue_at
+    end
+
+    test ":lightness strategy reorders by Oklch L" do
+      colors = "white\nblack\n#808080"
+
+      conn =
+        conn(
+          :get,
+          "/sort?strategy=lightness&colors=" <> URI.encode_www_form(colors)
+        )
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      sorted_section = isolate_sorted_section(conn.resp_body)
+      black_at = :binary.match(sorted_section, "#000000") |> elem(0)
+      gray_at = :binary.match(sorted_section, "#808080") |> elem(0)
+      white_at = :binary.match(sorted_section, "#ffffff") |> elem(0)
+      assert black_at < gray_at
+      assert gray_at < white_at
+    end
+
+    # Slice out only the "Sorted" section of the HTML body so
+    # that the colours inside the textarea (which echo the raw
+    # user input) don't confuse positional assertions.
+    defp isolate_sorted_section(body) do
+      [_, after_header] = String.split(body, ">Sorted (", parts: 2)
+      [sorted_section, _] = String.split(after_header, ">Input order<", parts: 2)
+      sorted_section
+    end
+
+    test "lines that look like comments are skipped" do
+      colors = "# a comment\n#ff0000\n\n  \n#0000ff"
+      parsed = Color.Palette.Visualizer.SortView.parse_colors(colors)
+
+      assert Enum.map(parsed, &Color.to_hex/1) == ["#ff0000", "#0000ff"]
+    end
+  end
+
   describe "Standalone" do
     test "start/1 and stop/1 work end-to-end" do
       {:ok, pid} = Color.Palette.Visualizer.Standalone.start(port: 0)
