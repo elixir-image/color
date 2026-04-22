@@ -31,6 +31,7 @@ defmodule Color.Palette.Visualizer.Render do
     base = Keyword.fetch!(assigns, :base)
     extra_fields = Keyword.get(assigns, :extra_fields, [])
     tab_params = Keyword.get(assigns, :tab_params, %{})
+    hide_seed = Keyword.get(assigns, :hide_seed, false)
 
     [
       "<!doctype html><html lang=\"en\"><head>",
@@ -46,7 +47,7 @@ defmodule Color.Palette.Visualizer.Render do
       escape(base),
       "/assets/logo.png\">",
       "</head><body>",
-      header(active, seed, base, extra_fields, tab_params),
+      header(active, seed, base, extra_fields, tab_params, hide_seed),
       "<main class=\"vz-main\">",
       error_block(error),
       body,
@@ -55,7 +56,7 @@ defmodule Color.Palette.Visualizer.Render do
     ]
   end
 
-  defp header(active, seed, base, extra_fields, tab_params) do
+  defp header(active, seed, base, extra_fields, tab_params, hide_seed) do
     tabs = [
       {"tonal", "Tonal"},
       {"theme", "Theme"},
@@ -100,11 +101,7 @@ defmodule Color.Palette.Visualizer.Render do
       "/",
       active,
       "\">",
-      "<label>seed <input type=\"color\" name=\"seed_picker\" value=\"",
-      escape(seed_hex),
-      "\"> <input type=\"text\" name=\"seed\" value=\"",
-      escape(seed),
-      "\" placeholder=\"#3b82f6 or rebeccapurple or oklch(...)\"></label>",
+      seed_input(seed, seed_hex, hide_seed),
       "<input type=\"hidden\" name=\"seed_picker_initial\" value=\"",
       escape(seed_hex),
       "\">",
@@ -113,6 +110,23 @@ defmodule Color.Palette.Visualizer.Render do
       "</form>",
       "</header>"
     ]
+  end
+
+  # Renders the seed picker + text input, or a hidden field when
+  # the active tab doesn't use the seed (so cross-tab navigation
+  # still preserves the last seed the user set elsewhere).
+  defp seed_input(seed, seed_hex, false) do
+    [
+      "<label>seed <input type=\"color\" name=\"seed_picker\" value=\"",
+      escape(seed_hex),
+      "\"> <input type=\"text\" name=\"seed\" value=\"",
+      escape(seed),
+      "\" placeholder=\"#3b82f6 or rebeccapurple or oklch(...)\"></label>"
+    ]
+  end
+
+  defp seed_input(seed, _seed_hex, true) do
+    ["<input type=\"hidden\" name=\"seed\" value=\"", escape(seed), "\">"]
   end
 
   # Builds the `?seed=…&k=v&…` query string appended to each tab's

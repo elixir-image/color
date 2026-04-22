@@ -56,6 +56,7 @@ defmodule Color.Palette.Visualizer.SortView do
       body: body,
       error: error,
       base: base,
+      hide_seed: true,
       extra_fields:
         extra_fields(strategy, chroma_threshold, hue_origin, grays, buckets, colors_text)
     )
