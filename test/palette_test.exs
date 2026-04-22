@@ -6,10 +6,12 @@ defmodule Color.PaletteTest do
   doctest Color.Palette.Theme
   doctest Color.Palette.Contrast
   doctest Color.Palette.ContrastScale
+  doctest Color.Palette.Sort
 
   alias Color.Palette
   alias Color.Palette.Contrast
   alias Color.Palette.ContrastScale
+  alias Color.Palette.Sort
   alias Color.Palette.Theme
   alias Color.Palette.Tonal
 
@@ -1016,6 +1018,141 @@ defmodule Color.PaletteTest do
       impossible = tokens["contrast"]["21.5"]
       assert impossible["$value"] == nil
       assert impossible["$extensions"]["color"]["reason"] == "unreachable"
+    end
+  end
+
+  describe "Sort.sort/2 — :hue_lightness" do
+    test "primary colours land in rainbow order" do
+      hexes = ["#0000ff", "#ff0000", "#00ff00", "#ffff00"]
+
+      result = hexes |> Sort.sort() |> Enum.map(&Color.to_hex/1)
+      assert result == ["#ff0000", "#ffff00", "#00ff00", "#0000ff"]
+    end
+
+    test "grays bucket to the front by default, sorted dark to light" do
+      hexes = ["#ff0000", "#ffffff", "#000000", "#808080", "#00ff00"]
+
+      result = hexes |> Sort.sort() |> Enum.map(&Color.to_hex/1)
+      # Grays first (dark→light), then chromatic rainbow.
+      assert result == ["#000000", "#808080", "#ffffff", "#ff0000", "#00ff00"]
+    end
+
+    test ":grays :after places achromatic colours at the end" do
+      hexes = ["#808080", "#ff0000", "#00ff00"]
+
+      result = Sort.sort(hexes, grays: :after) |> Enum.map(&Color.to_hex/1)
+      assert result == ["#ff0000", "#00ff00", "#808080"]
+    end
+
+    test ":grays :exclude drops achromatic colours entirely" do
+      hexes = ["#808080", "#ff0000", "#000000", "#00ff00"]
+
+      result = Sort.sort(hexes, grays: :exclude) |> Enum.map(&Color.to_hex/1)
+      assert result == ["#ff0000", "#00ff00"]
+    end
+
+    test ":hue_origin rotates the cut point in the hue circle" do
+      hexes = ["#ff0000", "#00ff00", "#0000ff"]
+
+      # With origin at 180° (roughly cyan), the rainbow starts
+      # after cyan, meaning blue comes first, then red wraps
+      # around, then green.
+      result = Sort.sort(hexes, hue_origin: 180.0) |> Enum.map(&Color.to_hex/1)
+      assert result == ["#0000ff", "#ff0000", "#00ff00"]
+    end
+
+    test "within a single hue, darker lightnesses come first" do
+      # Two shades of blue, hue essentially the same.
+      hexes = ["#7fa5ff", "#0000ff"]
+
+      result = Sort.sort(hexes) |> Enum.map(&Color.to_hex/1)
+      # Darker blue first, lighter second.
+      assert result == ["#0000ff", "#7fa5ff"]
+    end
+
+    test "preserves input structs (SRGB in, SRGB out)" do
+      {:ok, red} = Color.new("#ff0000")
+      {:ok, blue} = Color.new("#0000ff")
+
+      assert [%Color.SRGB{}, %Color.SRGB{}] = Sort.sort([red, blue])
+    end
+
+    test "handles an empty list" do
+      assert Sort.sort([]) == []
+    end
+
+    test "handles a single colour" do
+      hexes = ["#3b82f6"]
+      assert [%Color.SRGB{}] = Sort.sort(hexes)
+    end
+  end
+
+  describe "Sort.sort/2 — :stepped_hue" do
+    test "produces bucketed rainbow with zig-zag lightness" do
+      # Two shades in the red bucket, two in the green bucket.
+      hexes = ["#400000", "#ff8080", "#004000", "#80ff80"]
+
+      result = Sort.sort(hexes, strategy: :stepped_hue) |> Enum.map(&Color.to_hex/1)
+
+      # Red bucket (bucket 0) goes dark→light, then green bucket
+      # (bucket ~3) goes light→dark (alternating direction).
+      # So: dark red, light red, then light green, dark green.
+      assert result == ["#400000", "#ff8080", "#80ff80", "#004000"]
+    end
+
+    test "rejects buckets < 2" do
+      assert_raise Color.PaletteError, ~r/:buckets/, fn ->
+        Sort.sort(["#ff0000"], strategy: :stepped_hue, buckets: 1)
+      end
+    end
+  end
+
+  describe "Sort.sort/2 — :lightness" do
+    test "sorts dark to light regardless of hue" do
+      hexes = ["#ffffff", "#ff0000", "#000000", "#00ff00"]
+
+      result = Sort.sort(hexes, strategy: :lightness) |> Enum.map(&Color.to_hex/1)
+      # black, red, green, white (ordered by Oklch L).
+      assert result == ["#000000", "#ff0000", "#00ff00", "#ffffff"]
+    end
+  end
+
+  describe "Sort.sort/2 — validation" do
+    test "rejects unknown options" do
+      assert_raise Color.PaletteError, ~r/unknown/, fn ->
+        Sort.sort(["#ff0000"], bogus: true)
+      end
+    end
+
+    test "rejects unknown strategy" do
+      assert_raise Color.PaletteError, ~r/strategy/, fn ->
+        Sort.sort(["#ff0000"], strategy: :rainbow)
+      end
+    end
+
+    test "rejects hue_origin outside [0, 360)" do
+      assert_raise Color.PaletteError, ~r/hue_origin/, fn ->
+        Sort.sort(["#ff0000"], hue_origin: 360.0)
+      end
+    end
+
+    test "rejects negative chroma_threshold" do
+      assert_raise Color.PaletteError, ~r/chroma_threshold/, fn ->
+        Sort.sort(["#ff0000"], chroma_threshold: -0.1)
+      end
+    end
+
+    test "rejects invalid :grays value" do
+      assert_raise Color.PaletteError, ~r/grays/, fn ->
+        Sort.sort(["#ff0000"], grays: :middle)
+      end
+    end
+  end
+
+  describe "Palette.sort/2 wrapper" do
+    test "delegates to Sort.sort/2" do
+      hexes = ["#0000ff", "#ff0000"]
+      assert Palette.sort(hexes) == Sort.sort(hexes)
     end
   end
 end

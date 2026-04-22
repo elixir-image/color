@@ -29,6 +29,11 @@ defmodule Color.Palette do
     satisfy a minimum contrast ratio. A hybrid between `tonal`
     and `contrast`.
 
+  * `sort/2` — orders an arbitrary list of colours into a
+    perceptually-sensible sequence (rainbow, stepped-hue grid,
+    or lightness ramp). Useful when you have a heterogeneous
+    bag of swatches and need a human-readable layout.
+
   ## Working space
 
   All palette algorithms operate in **Oklch**, the cylindrical
@@ -43,6 +48,7 @@ defmodule Color.Palette do
 
   alias Color.Palette.Contrast
   alias Color.Palette.ContrastScale
+  alias Color.Palette.Sort
   alias Color.Palette.Theme
   alias Color.Palette.Tonal
 
@@ -181,6 +187,35 @@ defmodule Color.Palette do
   """
   @spec contrast_scale(Color.input(), keyword()) :: ContrastScale.t()
   def contrast_scale(seed, options \\ []), do: ContrastScale.new(seed, options)
+
+  @doc """
+  Sorts a list of colours into a perceptually-ordered sequence.
+
+  Thin wrapper around `Color.Palette.Sort.sort/2`. See that
+  module for the full option list and a detailed description of
+  each strategy.
+
+  ### Arguments
+
+  * `colors` is a list of values accepted by `Color.new/1`.
+
+  ### Options
+
+  See `Color.Palette.Sort.sort/2`.
+
+  ### Returns
+
+  * A list of `%Color.SRGB{}` structs in sorted order.
+
+  ### Examples
+
+      iex> hexes = ["#808080", "#ff0000", "#00ff00", "#0000ff"]
+      iex> hexes |> Color.Palette.sort() |> Enum.map(&Color.to_hex/1)
+      ["#808080", "#ff0000", "#00ff00", "#0000ff"]
+
+  """
+  @spec sort(list(Color.input()), keyword()) :: list(Color.SRGB.t())
+  def sort(colors, options \\ []), do: Sort.sort(colors, options)
 
   @doc """
   Returns `true` if every stop in the given palette is inside
