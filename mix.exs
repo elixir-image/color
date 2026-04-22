@@ -1,7 +1,7 @@
 defmodule Color.MixProject do
   use Mix.Project
 
-  @version "0.12.0"
+  @version "0.12.0-dev"
 
   def project do
     [

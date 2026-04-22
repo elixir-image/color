@@ -2,7 +2,11 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.12.0] — Unrelease
+## [0.12.0] — Unreleased
+
+### Adds
+
+* `Color.Palette.sort/2` to sort colors.
 
 ### Bug Fixes
 
