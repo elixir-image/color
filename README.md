@@ -35,6 +35,8 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 
 * **Palette generation**. `Color.Palette.tonal/2` produces Tailwind / Radix style tonal scales in Oklch. `Color.Palette.theme/2` produces Material Design 3 style themes — five coordinated scales from one seed, with Material role tokens. `Color.Palette.contrast/2` produces Adobe Leonardo style contrast-targeted palettes that hit exact WCAG or APCA ratios against a chosen background. `Color.Palette.contrast_scale/2` produces contrast-constrained tonal scales (Ström-Awn style) where any two stops ≥ `apart` label units apart are guaranteed to satisfy a minimum contrast ratio by construction.
 
+* **Palette transforms**. `Color.Palette.sort/2` orders an arbitrary list of colours into a perceptually-sensible sequence (rainbow, stepped-hue grid, lightness ramp, or material-aware PBR order with `%Color.Material{}` finishes). `Color.Palette.summarize/3` reduces a list of N colours to at most K representatives by agglomerative clustering in Oklab, with mass weighting and centroid-aware swatch selection. `Color.Palette.Cluster` exposes the underlying `merge_until/3`, `merge_pair/2`, `representative/2`, and `distance/3` primitives so libraries that produce their own clusters (e.g. K-means over image pixels in [`:image`](https://hex.pm/packages/image)) can re-use the same algorithm.
+
 * **Color temperature**. CCT ↔ chromaticity, Planckian locus and CIE daylight locus.
 
 * **CSS Color Module Level 4 / 5**. Full parser and serialiser for hex, named colors, `rgb()/rgba()`, `hsl()/hsla()`, `hwb()`, `lab()`, `lch()`, `oklab()`, `oklch()`, `color(srgb|display-p3|rec2020|…)`, `device-cmyk()`, `color-mix()`, relative color syntax, `none` keyword, and `calc()` expressions.
@@ -151,6 +153,18 @@ accessible = Color.Palette.contrast("#3b82f6",
 guaranteed = Color.Palette.contrast_scale("#3b82f6",
   guarantee: {4.5, 500}
 )
+
+# Sort a heterogeneous bag of colours into rainbow order in Oklch.
+Color.Palette.sort(["#808080", "#0000ff", "#ff0000", "#00ff00"])
+# => sorted: gray, red, green, blue
+
+# Reduce N colours to K representatives by agglomerative clustering
+# in Oklab (perceptually uniform, chromatic-axis weighted 2× over L).
+Color.Palette.summarize(
+  ["#ff0000", "#fe0202", "#0000ff", "#0202fe", "#00ff00"],
+  3
+)
+# => 3 SRGB swatches, one per surviving cluster
 ```
 
 ### CSS Color 4 / 5

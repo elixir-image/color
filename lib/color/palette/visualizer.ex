@@ -7,7 +7,7 @@ defmodule Color.Palette.Visualizer do
   Phoenix or Plug application, or run standalone during
   development via `Color.Palette.Visualizer.Standalone`.
 
-  ## Three views
+  ## Views
 
   * `/tonal` — [UI Colors](https://uicolors.app/) style. One seed
     becomes a row of swatches with hex, OKLCH, and contrast
@@ -22,6 +22,20 @@ defmodule Color.Palette.Visualizer do
   * `/contrast` — [Adobe Leonardo](https://leonardocolor.io/)
     style. Contrast-targeted swatches against a chosen background
     and a pass/fail matrix for common text sizes.
+
+  * `/scale` — Matt Ström-Awn's contrast-constrained tonal scale.
+
+  * `/gamut` — CIE chromaticity diagram with overlayable RGB
+    working spaces and the optional planckian locus.
+
+  * `/sort` — perceptually-ordered swatch strip from a free-form
+    list of colours (rainbow, stepped-hue grid, lightness ramp,
+    or material-aware PBR order).
+
+  * `/spectrum` — diagnostic view: a hue-frequency strip of the
+    input colour list, with achromatic entries shown separately
+    by lightness. Useful for spotting hue gaps and
+    achromatic/chromatic balance in any palette.
 
   All state lives in the URL — copy a URL and you've shared the
   palette.
@@ -67,6 +81,7 @@ defmodule Color.Palette.Visualizer do
     alias Color.Palette.Visualizer.ContrastView
     alias Color.Palette.Visualizer.GamutView
     alias Color.Palette.Visualizer.SortView
+    alias Color.Palette.Visualizer.SpectrumView
     alias Color.Palette.Visualizer.ThemeView
     alias Color.Palette.Visualizer.TonalView
 
@@ -106,6 +121,11 @@ defmodule Color.Palette.Visualizer do
     get "/sort" do
       params = parse_params(conn.params, :sort)
       html(conn, SortView.render(params, base_path(conn)))
+    end
+
+    get "/spectrum" do
+      params = parse_params(conn.params, :spectrum)
+      html(conn, SpectrumView.render(params, base_path(conn)))
     end
 
     get "/assets/style.css" do
@@ -223,9 +243,19 @@ defmodule Color.Palette.Visualizer do
             :hue_lightness
           ),
         chroma_threshold: number_default(Map.get(params, "chroma_threshold"), 0.02),
-        hue_origin: number_default(Map.get(params, "hue_origin"), 0.0),
+        hue_origin: number_default(Map.get(params, "hue_origin"), 15.0),
         grays: atom_default(Map.get(params, "grays"), [:before, :after, :exclude], :before),
         buckets: integer_default(Map.get(params, "buckets"), 8)
+      }
+    end
+
+    defp parse_params(params, :spectrum) do
+      %{
+        seed: resolve_seed(params, "#3b82f6"),
+        colors: Map.get(params, "colors") |> blank_default(SpectrumView.default_colors_text()),
+        bin_width: number_default(Map.get(params, "bin_width"), 4.0),
+        chroma_threshold: number_default(Map.get(params, "chroma_threshold"), 0.02),
+        hue_origin: number_default(Map.get(params, "hue_origin"), 15.0)
       }
     end
 

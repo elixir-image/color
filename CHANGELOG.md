@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] — May 2nd, 2026
+
+### Added
+
+* `Color.Palette.summarize/3` — reduce an arbitrary list of colours to *k* representative colours by agglomerative bottom-up clustering in Oklab. Chromatic axes are weighted 2× over lightness in the distance metric (perceptual: hue mismatch dominates lightness mismatch); each cluster's representative is chosen with a centroid-aware rule (highest mass-weighted chroma for chromatic centroids, closest-to-centroid for achromatic). Available as `Color.Palette.summarize/3` (façade) or directly as `Color.Palette.Summarize.summarize/3`.
+
+* `Color.Palette.Cluster` — public low-level clustering primitives (`from_colors/2`, `merge_until/3`, `merge_pair/2`, `representative/2`, `distance/3`). Exposed as a stable seam so libraries that produce their own clusters (notably K-means over image pixels in `:image`) can re-use the same Oklab metric and centroid-aware rep selection without algorithmic drift. `Color.Palette.Summarize` is now a thin wrapper over `Cluster`.
+
+* `/spectrum` route in `Color.Palette.Visualizer` — diagnostic view that renders an arbitrary colour list as a hue-frequency strip in Oklch, with achromatic entries shown separately by lightness. Useful for spotting hue gaps and chromatic/achromatic balance in any palette.
+
+### Changed
+
+* `Color.Palette.sort/2`'s default `:hue_origin` is now `15.0°` (was `0.0°`), placing the hue-circle cut just below pure red so the deepest reds anchor at the start of the strip and magentas/pinks (Oklch H < 15°) wrap past purple to the end. Pass `hue_origin: 0.0` to restore the previous cut-at-zero behaviour. The default applies to both `:hue_lightness` and `:stepped_hue` strategies.
+
 ## [0.12.0] — April 23rd, 2026
 
 ### Adds

@@ -38,7 +38,12 @@ defmodule Color.Palette.Sort do
 
   @default_strategy :hue_lightness
   @default_chroma_threshold 0.02
-  @default_hue_origin 0.0
+  # 15° in Oklch puts the wrap point just shy of pure red (≈29°),
+  # so the deepest reds anchor at the start of the rainbow rather
+  # than straddling the cut. Magentas and pinks (H < 15°) wrap to
+  # the end after purple, which matches the perceptual "around
+  # the wheel from red, through ROYGBIV, back through pink to red".
+  @default_hue_origin 15.0
   @default_buckets 8
   @default_grays :before
   @default_metallic_threshold 0.5
@@ -84,9 +89,12 @@ defmodule Color.Palette.Sort do
 
   * `:hue_origin` is the Oklch hue angle (in degrees, 0–360)
     where the rainbow "starts" — that is, where the sort cuts
-    the hue circle. Default `0.0` (red/orange region). Set to
-    `270.0` to start the rainbow at blue/purple, for example.
-    Applies to `:hue_lightness` and `:stepped_hue` only.
+    the hue circle. Default `15.0`, which sits just below pure
+    red (≈29° in Oklch) so the deepest reds anchor at the left
+    edge and magentas/pinks wrap past purple to the end. Set to
+    `0.0` for the older "cut at 0°" behaviour, or `270.0` to
+    start the rainbow at blue/purple. Applies to `:hue_lightness`
+    and `:stepped_hue` only.
 
   * `:grays` controls where achromatic colours land in the
     output. `:before` (default) places them at the start of the
@@ -167,8 +175,11 @@ defmodule Color.Palette.Sort do
     3. **Sort the chromatic bucket.** Primary key is
        `(H - hue_origin) mod 360`, ascending. Secondary key is
        lightness `L`, ascending — so within a single hue, the
-       darkest shade comes first. This produces ROYGBIV → wrap
-       when `hue_origin = 0`.
+       darkest shade comes first. With the default
+       `hue_origin = 15`, pure reds (≈29°) sit at the start of
+       the strip and the rainbow runs through orange, yellow,
+       green, blue, purple, with magentas and pinks wrapping
+       around past 360° to the end.
 
     4. **The wraparound caveat.** A hue circle has no start or
        end; the sort has to cut it somewhere. The first and last

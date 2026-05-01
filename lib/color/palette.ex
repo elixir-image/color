@@ -38,6 +38,11 @@ defmodule Color.Palette do
     `:material_pbr` strategy splits dielectrics from metals
     before colour-sorting each bucket.
 
+  * `summarize/3` — reduces a list of N colours to at most K
+    representative colours using agglomerative clustering in
+    Oklab. Pair with `sort/2` when you have a large bag of
+    near-duplicates and want a small, ordered palette.
+
   ## Working space
 
   All palette algorithms operate in **Oklch**, the cylindrical
@@ -53,6 +58,7 @@ defmodule Color.Palette do
   alias Color.Palette.Contrast
   alias Color.Palette.ContrastScale
   alias Color.Palette.Sort
+  alias Color.Palette.Summarize
   alias Color.Palette.Theme
   alias Color.Palette.Tonal
 
@@ -220,6 +226,53 @@ defmodule Color.Palette do
   """
   @spec sort(list(Color.input()), keyword()) :: list(Color.SRGB.t())
   def sort(colors, options \\ []), do: Sort.sort(colors, options)
+
+  @doc """
+  Reduces a list of colours to at most `k` representative
+  colours by perceptually-uniform clustering.
+
+  Useful when you have a heterogeneous bag of swatches with
+  near-duplicates — say, an extracted image palette, or merged
+  brand palettes — and want a smaller set that still captures
+  the input's chromatic character.
+
+  See `Color.Palette.Summarize` for the full algorithm and
+  option list. The clustering runs in **Oklab** (the rectangular
+  form of Oklch) with the chromatic axes weighted twice as much
+  as lightness, and each cluster's representative is picked
+  with a centroid-aware rule: the **highest-chroma** member for
+  chromatic clusters, the **closest-to-centroid** member for
+  achromatic ones.
+
+  ### Arguments
+
+  * `colors` is a list of values accepted by `Color.new/1`.
+
+  * `k` is the maximum number of colours in the output. If the
+    input has fewer than `k` distinct entries, the output may
+    be shorter.
+
+  ### Options
+
+  See `Color.Palette.Summarize.summarize/3`.
+
+  ### Returns
+
+  * A list of `%Color.SRGB{}` structs, length `≤ k`. Pipe
+    through `sort/2` for a perceptually ordered strip.
+
+  ### Examples
+
+      iex> hexes = ["#ff0000", "#fe0202", "#0000ff", "#0202fe", "#00ff00"]
+      iex> Color.Palette.summarize(hexes, 3) |> length()
+      3
+
+      iex> Color.Palette.summarize(["#ff0000", "#0000ff"], 5) |> length()
+      2
+
+  """
+  @spec summarize(list(Color.input()), pos_integer(), keyword()) :: list(Color.SRGB.t())
+  def summarize(colors, k, options \\ []), do: Summarize.summarize(colors, k, options)
 
   @doc """
   Returns `true` if every stop in the given palette is inside

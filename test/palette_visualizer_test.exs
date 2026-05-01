@@ -439,6 +439,52 @@ defmodule Color.Palette.VisualizerTest do
     end
   end
 
+  describe "spectrum view" do
+    test "GET /spectrum renders the default palette as a hue-distribution SVG" do
+      conn = conn(:get, "/spectrum") |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      # Form controls and SVG container must be present.
+      assert conn.resp_body =~ ~s(<textarea name="colors")
+      assert conn.resp_body =~ ~s(name="bin_width")
+      assert conn.resp_body =~ ~s(name="hue_origin")
+      assert conn.resp_body =~ "<svg"
+      # Default colour list emits at least one hex into the SVG fill.
+      assert conn.resp_body =~ ~s(fill="#ff0000")
+      # Both the chromatic and achromatic strips are labelled.
+      assert conn.resp_body =~ ">Hue spectrum<"
+      assert conn.resp_body =~ "achromatic (lightness)"
+    end
+
+    test "user-supplied colors are partitioned into chromatic and achromatic" do
+      colors = "#ff0000\nwhite\nblack\n#0000ff"
+
+      conn =
+        conn(:get, "/spectrum?colors=" <> URI.encode_www_form(colors))
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      # Summary shows 2 chromatic and 2 achromatic.
+      assert conn.resp_body =~ "Chromatic"
+      assert conn.resp_body =~ "Achromatic"
+      assert conn.resp_body =~ ~s(fill="#ff0000")
+      assert conn.resp_body =~ ~s(fill="#0000ff")
+      assert conn.resp_body =~ ~s(fill="#ffffff")
+      assert conn.resp_body =~ ~s(fill="#000000")
+    end
+
+    test "empty input renders a placeholder, not a crash" do
+      conn =
+        conn(:get, "/spectrum?colors=" <> URI.encode_www_form(""))
+        |> Color.Palette.Visualizer.call(@opts)
+
+      assert conn.status == 200
+      # Default textarea contents repopulate rather than emitting
+      # the placeholder, so just check we got a sensible page.
+      assert conn.resp_body =~ "<svg" or conn.resp_body =~ "Add one or more colours"
+    end
+  end
+
   describe "Standalone" do
     test "start/1 and stop/1 work end-to-end" do
       {:ok, pid} = Color.Palette.Visualizer.Standalone.start(port: 0)

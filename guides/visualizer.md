@@ -60,9 +60,9 @@ children = [
 Supervisor.start_link(children, strategy: :one_for_one)
 ```
 
-## The three views
+## The views
 
-All three views share one header: a tab bar, a seed input, any view-specific options (hue-drift toggle for Tonal, scheme picker for Theme, metric and background for Contrast), and a submit button. Pages are fully server-rendered HTML — no JavaScript.
+The visualizer ships seven views: `/tonal`, `/theme`, `/contrast`, `/scale`, `/gamut`, `/sort`, and `/spectrum`. The first five all start from a seed colour; the last two start from a free-form list of colours pasted into a textarea. All views share one header: a tab bar, the relevant input (seed picker or textarea), any view-specific options, and a submit button. Pages are fully server-rendered HTML — no JavaScript.
 
 The seed input is actually **two** controls side-by-side: a native `<input type="color">` and a free-text field. Click the swatch to open your OS's colour picker; or type `rebeccapurple`, `oklch(0.7 0.15 180)`, or any other CSS colour syntax in the text field. On submit the server prefers the text field if you changed it (i.e. its value differs from what the picker was initialised to), otherwise it uses the picker's value. The picker pre-fills with the resolved hex of whatever seed is currently in the URL, so `?seed=rebeccapurple` opens the picker on `#663399`.
 
@@ -150,6 +150,34 @@ The xy projection looks like this — note how much more green and how much less
 * `apart` — the minimum label distance that triggers the contrast guarantee. Default `500`.
 * `metric` — `wcag` (default) or `apca`. For APCA, `ratio` is interpreted as an Lc value (typical targets 45–90).
 * `hue_drift` — enables the paper's Bezold-Brücke compensation. Off by default.
+
+### Sort — perceptually-ordered swatch strip from a free-form list
+
+**URL.** `/sort?strategy=hue_lightness&hue_origin=15&grays=before`
+
+**What it shows.** A textarea where you paste a list of colours (one per line; any form `Color.new/1` accepts — hex, CSS named, `oklch(...)`, etc.) and a strip showing them in perceptually-uniform order. Achromatic colours (Oklch chroma below the configured threshold) sort separately from the chromatic rainbow because their hue angle is numerically unstable.
+
+**Options.**
+* `strategy` — `hue_lightness` (default ROYGBIV rainbow), `stepped_hue` (bucketed swatch grid with alternating-direction lightness ramps within each hue bucket), or `lightness` (dark → light, hue ignored).
+* `hue_origin` — the angle (in degrees, 0–360) at which the rainbow cuts the hue circle. Default `15.0` so the deepest reds anchor at the start of the strip.
+* `chroma_threshold` — the Oklch chroma below which a colour is treated as achromatic. Default `0.02`.
+* `grays` — `before` (default), `after`, or `exclude`.
+* `buckets` — for `stepped_hue` only, the number of hue buckets. Default `8`.
+
+`Color.Material{}` inputs (plastic, metal, ceramic finishes) are also accepted via the underlying `Color.Palette.sort/2`. The `:material_pbr` strategy splits dielectrics from metals before colour-sorting each bucket; surface this from the form by setting `strategy=material_pbr` in the URL.
+
+### Spectrum — hue-distribution diagnostic
+
+**URL.** `/spectrum?bin_width=4&hue_origin=15&chroma_threshold=0.02`
+
+**What it shows.** Given a list of colours in the textarea, an SVG histogram where the X-axis is Oklch hue (cut at `hue_origin`, default 15°) and each bin's column is built from the actual colours that fall into it, stacked dark-to-light. A separate strip below shows achromatic entries laid out by lightness. The view is read-only — there are no swatch cards or hex/Oklch readouts — and is intended as a *diagnostic* to spot hue gaps, lightness clumping, or chromatic/achromatic imbalance in any palette.
+
+The `Summary` block under the chart reports the chromatic / achromatic split as counts and percentages.
+
+**Options.**
+* `bin_width` — width of each hue bin in degrees. Default `4` (90 bins across 360°). Increase to coarsen, decrease for fine-grained inspection.
+* `hue_origin` — the angle at which the spectrum cuts the hue circle. Default `15.0`, matching the Sort view.
+* `chroma_threshold` — Oklch chroma below which a colour is shown in the achromatic strip. Default `0.02`.
 
 ## Sharing palettes
 

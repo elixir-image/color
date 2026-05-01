@@ -7,6 +7,8 @@ defmodule Color.PaletteTest do
   doctest Color.Palette.Contrast
   doctest Color.Palette.ContrastScale
   doctest Color.Palette.Sort
+  doctest Color.Palette.Cluster
+  doctest Color.Palette.Summarize
   doctest Color.Material
 
   alias Color.Material
@@ -1053,6 +1055,25 @@ defmodule Color.PaletteTest do
       assert result == ["#ff0000", "#00ff00"]
     end
 
+    test "default :hue_origin (15°) wraps sub-15° hues past pure red to the end" do
+      # A colour at Oklch H = 5° sits *below* the 15° cut, so
+      # under the default origin its normalised hue is 350° and
+      # it lands at the very end of the strip — after pure red
+      # (≈29°) and after blue (≈264°). Setting origin=0° puts
+      # H=5° before pure red, demonstrating the cut is what
+      # moves between the two configurations.
+      below_cut = %Color.Oklch{l: 0.55, c: 0.18, h: 5.0, alpha: nil}
+      {:ok, below_cut_srgb} = Color.Gamut.to_gamut(below_cut, :SRGB)
+
+      {:ok, red} = Color.new("#ff0000")
+      {:ok, blue} = Color.new("#0000ff")
+
+      assert Sort.sort([below_cut_srgb, red, blue]) == [red, blue, below_cut_srgb]
+
+      assert Sort.sort([below_cut_srgb, red, blue], hue_origin: 0.0) ==
+               [below_cut_srgb, red, blue]
+    end
+
     test ":hue_origin rotates the cut point in the hue circle" do
       hexes = ["#ff0000", "#00ff00", "#0000ff"]
 
@@ -1092,13 +1113,15 @@ defmodule Color.PaletteTest do
   describe "Sort.sort/2 — :stepped_hue" do
     test "produces bucketed rainbow with zig-zag lightness" do
       # Two shades in the red bucket, two in the green bucket.
+      # Pin `buckets: 4` so red lands in bucket 0 (0–90°, even, dark→light)
+      # and green lands in bucket 1 (90–180°, odd, light→dark) regardless
+      # of where the default `hue_origin` cuts the wheel.
       hexes = ["#400000", "#ff8080", "#004000", "#80ff80"]
 
-      result = Sort.sort(hexes, strategy: :stepped_hue) |> Enum.map(&Color.to_hex/1)
+      result =
+        Sort.sort(hexes, strategy: :stepped_hue, buckets: 4)
+        |> Enum.map(&Color.to_hex/1)
 
-      # Red bucket (bucket 0) goes dark→light, then green bucket
-      # (bucket ~3) goes light→dark (alternating direction).
-      # So: dark red, light red, then light green, dark green.
       assert result == ["#400000", "#ff8080", "#80ff80", "#004000"]
     end
 
@@ -1155,6 +1178,304 @@ defmodule Color.PaletteTest do
     test "delegates to Sort.sort/2" do
       hexes = ["#0000ff", "#ff0000"]
       assert Palette.sort(hexes) == Sort.sort(hexes)
+    end
+  end
+
+  describe "Summarize.summarize/3" do
+    alias Color.Palette.Summarize
+
+    test "merges near-duplicates into k clusters" do
+      # Three reds and three blues — k=2 should collapse each
+      # neighbourhood to one representative.
+      reds = ["#ff0000", "#fa0202", "#ee0404"]
+      blues = ["#0000ff", "#0202fa", "#0404ee"]
+      result = Summarize.summarize(reds ++ blues, 2)
+
+      assert length(result) == 2
+      hexes = Enum.map(result, &Color.to_hex/1)
+      # One representative is reddish, the other bluish.
+      assert Enum.any?(hexes, &String.starts_with?(&1, "#ff")) or
+               Enum.any?(hexes, &String.starts_with?(&1, "#fa")) or
+               Enum.any?(hexes, &String.starts_with?(&1, "#ee"))
+
+      assert Enum.any?(hexes, &String.starts_with?(&1, "#00"))
+    end
+
+    test "returns input unchanged when length(colors) <= k" do
+      hexes = ["#ff0000", "#0000ff"]
+      result = Summarize.summarize(hexes, 5) |> Enum.map(&Color.to_hex/1)
+
+      assert result == ["#ff0000", "#0000ff"]
+    end
+
+    test "chromatic clusters return the highest-chroma member" do
+      # A vivid red plus two muted variants. The cluster
+      # centroid sits between them, but the representative
+      # should be the vivid one because the centroid chroma
+      # exceeds the rep_chroma_threshold.
+      vivid = "#ff0000"
+      muted_a = "#cc4040"
+      muted_b = "#dd5555"
+
+      [rep] = Summarize.summarize([muted_a, vivid, muted_b], 1)
+      assert Color.to_hex(rep) == "#ff0000"
+    end
+
+    test "achromatic clusters return the closest-to-centroid member" do
+      # Dark, mid, light gray. Centroid lightness is ~0.5 (mid),
+      # so the rep must be the middle gray rather than either
+      # extreme.
+      hexes = ["#404040", "#808080", "#c0c0c0"]
+
+      [rep] = Summarize.summarize(hexes, 1)
+      assert Color.to_hex(rep) == "#808080"
+    end
+
+    test "weights pull the centroid toward the heavier inputs" do
+      # Two blues and one red, with the red weighted heavily.
+      # When merging to k=1 the centroid should land near red.
+      hexes = ["#0000ff", "#0000ff", "#ff0000"]
+
+      [rep] =
+        Summarize.summarize(hexes, 1, weights: [1.0, 1.0, 100.0])
+
+      {:ok, oklch} = Color.convert(rep, Color.Oklch)
+      # Pure red is around H ≈ 29° in Oklch; pure blue around 264°.
+      # With red dominating, the rep should sit closer to red.
+      assert oklch.h < 90 or oklch.h > 270
+    end
+
+    test "preserves an exact representative from the input set" do
+      # Merging shouldn't synthesise new colours — every output
+      # must be one of the input swatches.
+      hexes = ["#a0c0e0", "#10203f", "#ff8800", "#ffe000", "#a0a0a0"]
+      input_set = MapSet.new(hexes)
+
+      result = Summarize.summarize(hexes, 3) |> Enum.map(&Color.to_hex/1)
+
+      assert length(result) == 3
+      Enum.each(result, fn hex -> assert hex in input_set end)
+    end
+
+    test "rejects mismatched weights length" do
+      assert_raise Color.PaletteError, ~r/weights/, fn ->
+        Summarize.summarize(["#ff0000", "#00ff00"], 1, weights: [1.0])
+      end
+    end
+
+    test "rejects negative weights" do
+      assert_raise Color.PaletteError, ~r/weights/, fn ->
+        Summarize.summarize(["#ff0000", "#00ff00"], 1, weights: [-1.0, 1.0])
+      end
+    end
+
+    test "rejects non-positive ab_weight" do
+      assert_raise Color.PaletteError, ~r/ab_weight/, fn ->
+        Summarize.summarize(["#ff0000"], 1, ab_weight: 0)
+      end
+    end
+
+    test "rejects unknown options" do
+      assert_raise Color.PaletteError, ~r/bogus/, fn ->
+        Summarize.summarize(["#ff0000"], 1, bogus: :nope)
+      end
+    end
+
+    test "Palette.summarize/3 delegates to Summarize.summarize/3" do
+      hexes = ["#ff0000", "#fa0202", "#0000ff"]
+      assert Palette.summarize(hexes, 2) == Summarize.summarize(hexes, 2)
+    end
+  end
+
+  describe "Cluster.from_colors/2" do
+    alias Color.Palette.Cluster
+
+    test "produces one singleton cluster per input" do
+      [c1, c2] = Cluster.from_colors(["#ff0000", "#0000ff"])
+
+      assert c1.mass == 1.0
+      assert length(c1.members) == 1
+      assert hd(c1.members).output |> Color.to_hex() == "#ff0000"
+
+      assert c2.mass == 1.0
+      assert hd(c2.members).output |> Color.to_hex() == "#0000ff"
+    end
+
+    test "honours explicit weights" do
+      [c1, c2] = Cluster.from_colors(["#ff0000", "#0000ff"], weights: [3.0, 0.5])
+
+      assert c1.mass == 3.0
+      assert hd(c1.members).mass == 3.0
+      assert c2.mass == 0.5
+    end
+
+    test "rejects mismatched weights length" do
+      assert_raise Color.PaletteError, ~r/weights/, fn ->
+        Cluster.from_colors(["#ff0000", "#00ff00"], weights: [1.0])
+      end
+    end
+
+    test "rejects negative weights" do
+      assert_raise Color.PaletteError, ~r/weights/, fn ->
+        Cluster.from_colors(["#ff0000"], weights: [-1.0])
+      end
+    end
+
+    test "carries oklab + oklch through to members for downstream use" do
+      [%{members: [m]}] = Cluster.from_colors(["#ff0000"])
+
+      assert %Color.Oklab{} = m.oklab
+      assert %Color.Oklch{} = m.oklch
+      # Pure red sits at Oklch H ≈ 29° with positive a (red axis).
+      assert m.oklab.a > 0
+      assert_in_delta m.oklch.h, 29.0, 2.0
+    end
+  end
+
+  describe "Cluster.merge_until/3" do
+    alias Color.Palette.Cluster
+
+    test "is a no-op when the input already meets the target" do
+      input = Cluster.from_colors(["#ff0000", "#0000ff"])
+
+      assert Cluster.merge_until(input, 2) == input
+      assert Cluster.merge_until(input, 5) == input
+    end
+
+    test "collapses N inputs into exactly target_count clusters" do
+      input = Cluster.from_colors(["#ff0000", "#fe0202", "#fc0404", "#0000ff", "#0202fc"])
+      result = Cluster.merge_until(input, 2)
+
+      assert length(result) == 2
+      total_members = Enum.sum(Enum.map(result, &length(&1.members)))
+      assert total_members == 5
+    end
+
+    test "merged centroid is the mass-weighted mean" do
+      input = Cluster.from_colors(["#ff0000", "#0000ff"], weights: [3.0, 1.0])
+      [merged] = Cluster.merge_until(input, 1)
+
+      assert merged.mass == 4.0
+      [c1, c2] = input
+      {l1, a1, b1} = c1.centroid
+      {l2, a2, b2} = c2.centroid
+
+      expected = {
+        (l1 * 3.0 + l2 * 1.0) / 4.0,
+        (a1 * 3.0 + a2 * 1.0) / 4.0,
+        (b1 * 3.0 + b2 * 1.0) / 4.0
+      }
+
+      {ml, ma, mb} = merged.centroid
+      {el, ea, eb} = expected
+      assert_in_delta ml, el, 1.0e-9
+      assert_in_delta ma, ea, 1.0e-9
+      assert_in_delta mb, eb, 1.0e-9
+    end
+
+    test "operates on caller-built clusters (image pipeline shape)" do
+      # The :image library produces clusters from K-means
+      # centroids without going through `from_colors`. Smoke-test
+      # that any map matching the documented shape works.
+      red_oklab = oklab_for("#ff0000")
+      red_oklch = oklch_for("#ff0000")
+      blue_oklab = oklab_for("#0000ff")
+      blue_oklch = oklch_for("#0000ff")
+
+      clusters = [
+        %{
+          centroid: {red_oklab.l, red_oklab.a, red_oklab.b},
+          mass: 100.0,
+          members: [%{output: :red, oklab: red_oklab, oklch: red_oklch, mass: 100.0}]
+        },
+        %{
+          centroid: {blue_oklab.l, blue_oklab.a, blue_oklab.b},
+          mass: 50.0,
+          members: [%{output: :blue, oklab: blue_oklab, oklch: blue_oklch, mass: 50.0}]
+        }
+      ]
+
+      [merged] = Cluster.merge_until(clusters, 1)
+      assert merged.mass == 150.0
+      assert Enum.sort(Enum.map(merged.members, & &1.output)) == [:blue, :red]
+    end
+
+    test "rejects non-positive ab_weight" do
+      input = Cluster.from_colors(["#ff0000", "#0000ff"])
+
+      assert_raise Color.PaletteError, ~r/ab_weight/, fn ->
+        Cluster.merge_until(input, 1, ab_weight: 0)
+      end
+    end
+
+    defp oklab_for(hex) do
+      {:ok, srgb} = Color.new(hex)
+      {:ok, oklab} = Color.convert(srgb, Color.Oklab)
+      oklab
+    end
+
+    defp oklch_for(hex) do
+      {:ok, srgb} = Color.new(hex)
+      {:ok, oklch} = Color.convert(srgb, Color.Oklch)
+      %{oklch | l: oklch.l || 0.0, c: oklch.c || 0.0, h: oklch.h || 0.0}
+    end
+  end
+
+  describe "Cluster.representative/2" do
+    alias Color.Palette.Cluster
+
+    test "chromatic clusters return the highest mass-weighted-chroma member" do
+      [cluster] =
+        Cluster.from_colors(["#cc4040", "#ff0000", "#dd5555"])
+        |> Cluster.merge_until(1)
+
+      assert Cluster.representative(cluster) |> Color.to_hex() == "#ff0000"
+    end
+
+    test "achromatic clusters return the closest-to-centroid member" do
+      [cluster] =
+        Cluster.from_colors(["#404040", "#808080", "#c0c0c0"])
+        |> Cluster.merge_until(1)
+
+      assert Cluster.representative(cluster) |> Color.to_hex() == "#808080"
+    end
+
+    test "honours :rep_chroma_threshold by routing borderline-chromatic clusters either way" do
+      # A near-grey cluster (centroid chroma ≈ 0.025): with the
+      # default threshold (0.03) it falls into the achromatic
+      # branch; lowering the threshold below the centroid's
+      # chroma forces the chromatic branch.
+      [cluster] =
+        Cluster.from_colors(["#888080", "#807880"])
+        |> Cluster.merge_until(1)
+
+      {_l, a, b} = cluster.centroid
+      centroid_chroma = :math.sqrt(a * a + b * b)
+      assert centroid_chroma > 0.0 and centroid_chroma < 0.03
+
+      # Default — achromatic branch.
+      assert Cluster.representative(cluster) ==
+               Cluster.representative(cluster, rep_chroma_threshold: 0.03)
+
+      # Threshold below the centroid's actual chroma — chromatic
+      # branch (highest mass-weighted-chroma member).
+      forced = Cluster.representative(cluster, rep_chroma_threshold: 0.0)
+      assert %Color.SRGB{} = forced
+    end
+  end
+
+  describe "Cluster.distance/3" do
+    alias Color.Palette.Cluster
+
+    test "returns 0 for identical points" do
+      assert Cluster.distance({0.5, 0.0, 0.0}, {0.5, 0.0, 0.0}, 2.0) == 0.0
+    end
+
+    test "weighting (a, b) higher than L makes hue-mismatch dominate" do
+      # Same L, different a → distance scales with √ab_weight.
+      d1 = Cluster.distance({0.5, 0.0, 0.0}, {0.5, 0.1, 0.0}, 1.0)
+      d4 = Cluster.distance({0.5, 0.0, 0.0}, {0.5, 0.1, 0.0}, 4.0)
+      assert_in_delta d4 / d1, 2.0, 1.0e-9
     end
   end
 
