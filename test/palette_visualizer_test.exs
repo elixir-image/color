@@ -486,6 +486,7 @@ defmodule Color.Palette.VisualizerTest do
   end
 
   describe "Standalone" do
+    @tag :capture_log
     test "start/1 and stop/1 work end-to-end" do
       {:ok, pid} = Color.Palette.Visualizer.Standalone.start(port: 0)
       assert is_pid(pid)
