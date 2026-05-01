@@ -16,6 +16,12 @@ All notable changes to this project are documented here. The format is based on 
 
 * `Color.Palette.sort/2`'s default `:hue_origin` is now `15.0°` (was `0.0°`), placing the hue-circle cut just below pure red so the deepest reds anchor at the start of the strip and magentas/pinks (Oklch H < 15°) wrap past purple to the end. Pass `hue_origin: 0.0` to restore the previous cut-at-zero behaviour. The default applies to both `:hue_lightness` and `:stepped_hue` strategies.
 
+## [0.12.1] — April 25th, 2026
+
+### Bug Fixes
+
+* Conditionally compile Visualizer and Standalone on optional deps.
+
 ## [0.12.0] — April 23rd, 2026
 
 ### Adds
@@ -74,14 +80,14 @@ All notable changes to this project are documented here. The format is based on 
 
 * Palette gamut checks. `Color.Palette.in_gamut?/2` and `Color.Palette.gamut_report/2` answer "is every stop in this palette inside the chosen RGB working space?", with `gamut_report/2` returning a per-stop breakdown listing exactly which stops failed.
 
-* Public APIs for designer-tool integrations. 
-  * `Color.Palette.Tonal.to_css/2` and `Color.Palette.ContrastScale.to_css/2` emit CSS custom-property blocks (selector and name prefix configurable). 
-  * `Color.Palette.Tonal.to_tailwind/2` and `Color.Palette.ContrastScale.to_tailwind/2` emit `theme.extend.colors` fragments ready for `tailwind.config.js`. 
-  * `Color.Gamut.SVG.render/1` renders a complete chromaticity-diagram SVG — projection, gamut overlays, Planckian locus, seed / palette overlays, sizing, and colour overrides all under a single keyword-list API. 
+* Public APIs for designer-tool integrations.
+  * `Color.Palette.Tonal.to_css/2` and `Color.Palette.ContrastScale.to_css/2` emit CSS custom-property blocks (selector and name prefix configurable).
+  * `Color.Palette.Tonal.to_tailwind/2` and `Color.Palette.ContrastScale.to_tailwind/2` emit `theme.extend.colors` fragments ready for `tailwind.config.js`.
+  * `Color.Gamut.SVG.render/1` renders a complete chromaticity-diagram SVG — projection, gamut overlays, Planckian locus, seed / palette overlays, sizing, and colour overrides all under a single keyword-list API.
 
 * `Color.Gamut.Diagram` — pure-data module for chromaticity diagrams.
 
-* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram. 
+* `Color.Palette.Visualizer` gains a `/gamut` tab rendering an inline SVG chromaticity diagram.
 
 * `Color.Palette.ContrastScale` — a fourth palette algorithm, inspired by Matt Ström-Awn's [Generating colour palettes with math](https://mattstromawn.com/writing/generating-color-palettes/).
 
@@ -97,7 +103,7 @@ All notable changes to this project are documented here. The format is based on 
 
 ### Added
 
-* `Color.Palette` module with three palette-generation algorithms for design systems and web sites. 
+* `Color.Palette` module with three palette-generation algorithms for design systems and web sites.
 
 * `Color.Palette.Visualizer` — a Plug-based web UI for previewing the three palette algorithms. Three views modelled on [UI Colors](https://uicolors.app/generate) (Tonal), [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/) (Theme), and [Adobe Leonardo](https://leonardocolor.io/) (Contrast).
 

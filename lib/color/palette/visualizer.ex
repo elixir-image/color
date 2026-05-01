@@ -1,74 +1,81 @@
-defmodule Color.Palette.Visualizer do
-  @moduledoc """
-  A web-based visualizer for the palettes produced by
-  `Color.Palette`.
+# `Color.Palette.Visualizer` is a `Plug.Router`. It is only
+# defined when both `:plug` and `:plug_router` are available
+# (i.e., when the consumer has added `{:plug, "~> 1.15"}` to
+# their deps). When `:plug` isn't installed, the module simply
+# doesn't exist — calling any function on it raises the
+# standard `UndefinedFunctionError: module not available`,
+# which is the conventional Elixir signal for "you're missing
+# a dependency."
+if Code.ensure_loaded?(Plug.Router) do
+  defmodule Color.Palette.Visualizer do
+    @moduledoc """
+    A web-based visualizer for the palettes produced by
+    `Color.Palette`.
 
-  This module is a `Plug.Router` that can be mounted inside a
-  Phoenix or Plug application, or run standalone during
-  development via `Color.Palette.Visualizer.Standalone`.
+    This module is a `Plug.Router` that can be mounted inside a
+    Phoenix or Plug application, or run standalone during
+    development via `Color.Palette.Visualizer.Standalone`.
 
-  ## Views
+    ## Views
 
-  * `/tonal` — [UI Colors](https://uicolors.app/) style. One seed
-    becomes a row of swatches with hex, OKLCH, and contrast
-    values, plus exportable CSS custom properties and Tailwind
-    config.
+    * `/tonal` — [UI Colors](https://uicolors.app/) style. One seed
+      becomes a row of swatches with hex, OKLCH, and contrast
+      values, plus exportable CSS custom properties and Tailwind
+      config.
 
-  * `/theme` — [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/)
-    style. Five tonal scales and a grid of Material Design 3
-    role tokens (primary / on-primary / surface / outline / …)
-    for light and dark schemes.
+    * `/theme` — [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/)
+      style. Five tonal scales and a grid of Material Design 3
+      role tokens (primary / on-primary / surface / outline / …)
+      for light and dark schemes.
 
-  * `/contrast` — [Adobe Leonardo](https://leonardocolor.io/)
-    style. Contrast-targeted swatches against a chosen background
-    and a pass/fail matrix for common text sizes.
+    * `/contrast` — [Adobe Leonardo](https://leonardocolor.io/)
+      style. Contrast-targeted swatches against a chosen background
+      and a pass/fail matrix for common text sizes.
 
-  * `/scale` — Matt Ström-Awn's contrast-constrained tonal scale.
+    * `/scale` — Matt Ström-Awn's contrast-constrained tonal scale.
 
-  * `/gamut` — CIE chromaticity diagram with overlayable RGB
-    working spaces and the optional planckian locus.
+    * `/gamut` — CIE chromaticity diagram with overlayable RGB
+      working spaces and the optional planckian locus.
 
-  * `/sort` — perceptually-ordered swatch strip from a free-form
-    list of colours (rainbow, stepped-hue grid, lightness ramp,
-    or material-aware PBR order).
+    * `/sort` — perceptually-ordered swatch strip from a free-form
+      list of colours (rainbow, stepped-hue grid, lightness ramp,
+      or material-aware PBR order).
 
-  * `/spectrum` — diagnostic view: a hue-frequency strip of the
-    input colour list, with achromatic entries shown separately
-    by lightness. Useful for spotting hue gaps and
-    achromatic/chromatic balance in any palette.
+    * `/spectrum` — diagnostic view: a hue-frequency strip of the
+      input colour list, with achromatic entries shown separately
+      by lightness. Useful for spotting hue gaps and
+      achromatic/chromatic balance in any palette.
 
-  All state lives in the URL — copy a URL and you've shared the
-  palette.
+    All state lives in the URL — copy a URL and you've shared the
+    palette.
 
-  ## Mounting in Phoenix
+    ## Mounting in Phoenix
 
-  In your `router.ex`:
+    In your `router.ex`:
 
-      forward "/palette", Color.Palette.Visualizer
+        forward "/palette", Color.Palette.Visualizer
 
-  ## Running standalone
+    ## Running standalone
 
-      Color.Palette.Visualizer.Standalone.start(port: 4001)
+        Color.Palette.Visualizer.Standalone.start(port: 4001)
 
-  ## Optional dependencies
+    ## Optional dependencies
 
-  The visualizer pulls in `:plug` (required for the router) and
-  `:bandit` (only used by the standalone helper). Both are
-  declared `optional: true` in this library's `mix.exs`, so you
-  must add them to your own project's deps to use the visualizer:
+    The visualizer pulls in `:plug` (required for the router) and
+    `:bandit` (only used by the standalone helper). Both are
+    declared `optional: true` in this library's `mix.exs`, so you
+    must add them to your own project's deps to use the visualizer:
 
-      {:plug, "~> 1.15"},
-      {:bandit, "~> 1.5"}
+        {:plug, "~> 1.15"},
+        {:bandit, "~> 1.5"}
 
-  The core palette algorithms have no such dependency and will
-  compile without either of these in place.
+    The core palette algorithms have no such dependency and will
+    compile without either of these in place. This module itself
+    is only compiled when `:plug` is present — without it,
+    `Color.Palette.Visualizer` doesn't exist as a module.
 
-  """
+    """
 
-  # Deferred compile-time check: raise at use time, not at
-  # compile time of this library, so users who never touch the
-  # visualizer don't need plug installed.
-  if Code.ensure_loaded?(Plug.Router) do
     use Plug.Router
 
     plug(Plug.Logger, log: :debug)
@@ -371,14 +378,5 @@ defmodule Color.Palette.Visualizer do
     end
 
     defp atom_default(_, _, default), do: default
-  else
-    @compile_error "Color.Palette.Visualizer requires :plug. " <>
-                     "Add `{:plug, \"~> 1.15\"}` to your project's deps."
-
-    @doc false
-    def init(_), do: raise(@compile_error)
-
-    @doc false
-    def call(_, _), do: raise(@compile_error)
   end
 end
