@@ -116,6 +116,7 @@ defmodule Color.Palette.Visualizer.SpectrumView do
 
   defp prepare(srgb) do
     {:ok, oklch} = Color.convert(srgb, Color.Oklch)
+
     %{
       output: srgb,
       hex: Color.to_hex(srgb),

@@ -290,7 +290,11 @@ defmodule Color.Palette.Cluster do
 
   """
   @spec merge_pair(cluster(), cluster()) :: cluster()
-  def merge_pair(%{centroid: ca, mass: ma, members: ms_a}, %{centroid: cb, mass: mb, members: ms_b}) do
+  def merge_pair(%{centroid: ca, mass: ma, members: ms_a}, %{
+        centroid: cb,
+        mass: mb,
+        members: ms_b
+      }) do
     total = ma + mb
     {al, aa, ab} = ca
     {bl, ba, bb} = cb

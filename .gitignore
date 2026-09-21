@@ -32,3 +32,6 @@ mise.toml
 # Claude
 CLAUDE.md
 /.claude
+
+# Session context written by Claude; personal, never committed.
+CLAUDE.local.md
