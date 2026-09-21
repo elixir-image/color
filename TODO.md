@@ -34,6 +34,7 @@ Blockers for a true drop-in swap; the migration plan is in the `Color` moduledoc
 
 ## Done
 
+* [x] **CI matrix on the current standard** — bumped the 1.20 rows to `1.20.4`, added an OTP 29 row and moved the lint marker to it, upgraded `actions/checkout` to `@v5`. 2026-09-21.
 * [x] **API symmetry** — `convert/3` accepts `working_space:` in its options, with `convert/4` retained as positional sugar.
 * [x] **`Color.Behaviour`** — declares `to_xyz/1` and `from_xyz/1`; 20 of 21 space modules conform.
 * [x] **Property-based tests** — `test/property_test.exs`, 58 properties covering round-trip identity, alpha preservation, hue wrap-around, gamut mapping invariance, ΔE symmetry, mix endpoint identity and WCAG contrast bounds.
