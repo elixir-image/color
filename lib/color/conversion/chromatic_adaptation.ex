@@ -13,8 +13,8 @@ defmodule Color.ChromaticAdaptation do
 
   """
 
-  alias Color.Tristimulus
   alias Color.Conversion.Lindbloom
+  alias Color.Tristimulus
 
   @chromatic_adaptations %{
     xyz_scaling: %{

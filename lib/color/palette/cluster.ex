@@ -388,7 +388,7 @@ defmodule Color.Palette.Cluster do
       iex> [cluster] =
       ...>   Color.Palette.Cluster.from_colors(["#ff0000", "#cc4040"])
       ...>   |> Color.Palette.Cluster.merge_until(1)
-      iex> Color.Palette.Cluster.representative(cluster) |> Color.to_hex()
+      iex> Color.Palette.Cluster.representative(cluster) |> Color.to_hex!()
       "#ff0000"
 
   """

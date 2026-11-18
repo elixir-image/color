@@ -36,11 +36,11 @@ defmodule Color.ANSI do
       true
 
       iex> {:ok, c, :foreground} = Color.ANSI.parse("\\e[38;2;255;0;0m")
-      iex> Color.to_hex(c)
+      iex> Color.to_hex!(c)
       "#ff0000"
 
       iex> {:ok, c, :background} = Color.ANSI.parse("\\e[41m")
-      iex> Color.to_hex(c)
+      iex> Color.to_hex!(c)
       "#aa0000"
 
       iex> Color.ANSI.nearest_256("#ff0000")

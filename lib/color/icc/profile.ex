@@ -331,7 +331,7 @@ defmodule Color.ICC.Profile do
             {:ok, {:gamma, gamma_u8 / 256.0}}
 
           n ->
-            entries = for <<v::16 <- :binary.part(rest, 0, n * 2)>>, do: v / 65535.0
+            entries = for <<v::16 <- :binary.part(rest, 0, n * 2)>>, do: v / 65_535.0
             {:ok, {:lut, entries}}
         end
 
@@ -477,5 +477,5 @@ defmodule Color.ICC.Profile do
   end
 
   # s15Fixed16Number → float
-  defp s15_fixed_16(int), do: int / 65536.0
+  defp s15_fixed_16(int), do: int / 65_536.0
 end

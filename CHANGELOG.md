@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] — November 18th, 2026
+
+First stable release. The public API is now covered by semantic versioning: the surface documented in the moduledocs and guides will not break within the 1.x line.
+
+### Breaking changes
+
+* `Color.to_hex/1`, `Color.to_css/1,2`, and `Color.to_ansi/1,2` now return `{:ok, string}` or `{:error, exception}` and no longer raise on invalid input, bringing them in line with the rest of the library. The raising variants are available as `Color.to_hex!/1`, `Color.to_css!/1,2`, and `Color.to_ansi!/1,2`.
+
+### Changed
+
+* The CI matrix pins every row to an exact Elixir and OTP patch release, and the lint row now also runs `mix credo --strict` and `MIX_ENV=release mix docs --warnings-as-errors`.
+
+### Added
+
+* `.credo.exs` with the project's strict configuration, added as a `:dev` / `:test` dependency.
+
 ## [0.13.0] — May 2nd, 2026
 
 ### Added
@@ -18,19 +34,19 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [0.12.1] — April 25th, 2026
 
-### Bug Fixes
+### Fixed
 
 * Conditionally compile Visualizer and Standalone on optional deps.
 
 ## [0.12.0] — April 23rd, 2026
 
-### Adds
+### Added
 
 * `Color.Palette.sort/2` to sort colors.
 
 * Add Color.Material and :material_pbr sort strategy for mixed finishes.
 
-### Bug Fixes
+### Fixed
 
 * Pin form row under header and add favicon link.
 
@@ -52,13 +68,13 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [0.9.0] — April 16th, 2026
 
-### Bug Fixes
+### Fixed
 
 * Add the seed as a URL param so the seed travels to each tab in the visualizer.
 
 ## [0.8.0] — April 16th, 2026
 
-### Bug Fixes
+### Fixed
 
 * Smooth the tonal lightness gradient for the palette.
 
@@ -107,7 +123,7 @@ All notable changes to this project are documented here. The format is based on 
 
 * `Color.Palette.Visualizer` — a Plug-based web UI for previewing the three palette algorithms. Three views modelled on [UI Colors](https://uicolors.app/generate) (Tonal), [Material Theme Builder](https://material-foundation.github.io/material-theme-builder/) (Theme), and [Adobe Leonardo](https://leonardocolor.io/) (Contrast).
 
-## [0.4.0]
+## [0.4.0] — April 12th, 2026
 
 ### Added
 
@@ -123,7 +139,7 @@ All notable changes to this project are documented here. The format is based on 
 
 * Changed all colorspace module names to be the closest possible match to their standard names.
 
-## [0.3.0]
+## [0.3.0] — April 10th, 2026
 
 ### Added
 

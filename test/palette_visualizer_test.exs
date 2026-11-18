@@ -435,7 +435,7 @@ defmodule Color.Palette.VisualizerTest do
       colors = "# a comment\n#ff0000\n\n  \n#0000ff"
       parsed = Color.Palette.Visualizer.SortView.parse_colors(colors)
 
-      assert Enum.map(parsed, &Color.to_hex/1) == ["#ff0000", "#0000ff"]
+      assert Enum.map(parsed, &Color.to_hex!/1) == ["#ff0000", "#0000ff"]
     end
   end
 

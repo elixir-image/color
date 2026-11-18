@@ -200,15 +200,15 @@ defmodule Color.Palette.Sort do
   ### Examples
 
       iex> hexes = ["#808080", "#ff0000", "#00ff00", "#0000ff", "#ffff00"]
-      iex> hexes |> Color.Palette.Sort.sort() |> Enum.map(&Color.to_hex/1)
+      iex> hexes |> Color.Palette.Sort.sort() |> Enum.map(&Color.to_hex!/1)
       ["#808080", "#ff0000", "#ffff00", "#00ff00", "#0000ff"]
 
       iex> hexes = ["#ff0000", "#ffff00", "#00ff00"]
-      iex> hexes |> Color.Palette.Sort.sort(strategy: :lightness) |> Enum.map(&Color.to_hex/1)
+      iex> hexes |> Color.Palette.Sort.sort(strategy: :lightness) |> Enum.map(&Color.to_hex!/1)
       ["#ff0000", "#00ff00", "#ffff00"]
 
       iex> hexes = ["#ff0000", "#0000ff"]
-      iex> hexes |> Color.Palette.Sort.sort(grays: :exclude) |> Enum.map(&Color.to_hex/1)
+      iex> hexes |> Color.Palette.Sort.sort(grays: :exclude) |> Enum.map(&Color.to_hex!/1)
       ["#ff0000", "#0000ff"]
 
       iex> items = [

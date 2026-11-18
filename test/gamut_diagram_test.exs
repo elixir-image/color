@@ -104,7 +104,7 @@ defmodule Color.Gamut.DiagramTest do
 
   describe "planckian_locus/2" do
     test "returns the expected number of points" do
-      assert length(Diagram.planckian_locus(2000..10000//1000)) == 9
+      assert length(Diagram.planckian_locus(2000..10_000//1000)) == 9
     end
 
     test "6500 K is near the D65 chromaticity" do

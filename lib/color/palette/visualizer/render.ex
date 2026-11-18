@@ -142,11 +142,9 @@ defmodule Color.Palette.Visualizer.Render do
     base = "?seed=" <> URI.encode_www_form(seed)
 
     extra_pairs =
-      extras
-      |> Enum.map(fn {k, v} ->
+      Enum.map_join(extras, "&", fn {k, v} ->
         URI.encode_www_form(to_string(k)) <> "=" <> URI.encode_www_form(to_string(v))
       end)
-      |> Enum.join("&")
 
     base <> "&" <> extra_pairs
   end
@@ -161,7 +159,7 @@ defmodule Color.Palette.Visualizer.Render do
 
   def resolve_hex(input, default) do
     case Color.new(input) do
-      {:ok, srgb} -> Color.to_hex(srgb)
+      {:ok, srgb} -> Color.to_hex!(srgb)
       _ -> default
     end
   rescue
@@ -196,7 +194,7 @@ defmodule Color.Palette.Visualizer.Render do
 
   defp swatch(palette, label) do
     color = Map.fetch!(palette.stops, label)
-    hex = Color.to_hex(color)
+    hex = Color.to_hex!(color)
     {:ok, oklch} = Color.convert(color, Color.Oklch)
     text_color = text_on(color)
 
@@ -254,7 +252,7 @@ defmodule Color.Palette.Visualizer.Render do
   defp pass_class(r) when r >= 3.0, do: "warn"
   defp pass_class(_), do: "fail"
 
-  @doc "\"#000\" or \"#fff\", whichever has higher contrast against the given colour."
+  @doc ~s(`"#000"` or `"#fff"`, whichever has higher contrast against the given colour.)
   @spec text_on(Color.input()) :: binary()
   def text_on(color) do
     white = Color.Contrast.wcag_ratio(color, "white")
@@ -283,11 +281,10 @@ defmodule Color.Palette.Visualizer.Render do
       entries =
         map
         |> Enum.sort_by(fn {k, _} -> k end)
-        |> Enum.map(fn {k, v} ->
+        |> Enum.map_join(",\n", fn {k, v} ->
           indent(depth + 1) <>
             IO.iodata_to_binary(:json.encode(k)) <> ": " <> format_value(v, depth + 1)
         end)
-        |> Enum.join(",\n")
 
       "{\n" <> entries <> "\n" <> indent(depth) <> "}"
     end

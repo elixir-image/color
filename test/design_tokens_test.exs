@@ -136,7 +136,7 @@ defmodule Color.DesignTokensTest do
 
     test "hex-only fallback" do
       {:ok, srgb} = DesignTokens.decode(%{"hex" => "#3b82f6"})
-      assert Color.to_hex(srgb) == "#3b82f6"
+      assert Color.to_hex!(srgb) == "#3b82f6"
     end
 
     test "all DTCG colour spaces" do
@@ -221,7 +221,7 @@ defmodule Color.DesignTokensTest do
       re_encoded = DesignTokens.encode(struct)
 
       assert re_encoded["components"] == [0.231, 0.509, 0.965]
-      assert re_encoded["hex"] == Color.to_hex(struct)
+      assert re_encoded["hex"] == Color.to_hex!(struct)
     end
 
     test "oklch round-trip" do

@@ -11,8 +11,8 @@ defmodule Color.HSLuv.Gamut do
 
   """
 
-  @epsilon 216 / 24389
-  @kappa 24389 / 27
+  @epsilon 216 / 24_389
+  @kappa 24_389 / 27
 
   # Load the XYZ -> linear sRGB matrix at compile time.
   {:ok, info} = Color.RGB.WorkingSpace.rgb_conversion_matrix(:SRGB)

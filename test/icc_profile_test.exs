@@ -14,7 +14,7 @@ defmodule Color.ICC.ProfileTest do
   # Synthetic profile builder
   # ----------------------------------------------------------------------
 
-  defp s15(value) when is_number(value), do: round(value * 65536)
+  defp s15(value) when is_number(value), do: round(value * 65_536)
 
   defp xyz_tag(x, y, z) do
     <<"XYZ ", 0::32, s15(x)::32-signed, s15(y)::32-signed, s15(z)::32-signed>>

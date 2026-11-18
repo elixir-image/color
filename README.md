@@ -53,18 +53,18 @@ Beyond conversions, the library provides chromatic adaptation (Bradford, von Kri
 
 * **Typed errors**. Every fallible function returns `{:ok, color}` or `{:error, %SomeError{...}}` where the exception struct carries the offending value, the space, the reason, and any other relevant fields. See `Color.InvalidColorError`, `Color.InvalidComponentError`, `Color.UnknownColorSpaceError`, `Color.UnknownColorNameError`, `Color.UnknownWorkingSpaceError`, `Color.InvalidHexError`, `Color.ParseError`, `Color.UnknownBlendModeError`, `Color.UnknownGamutMethodError`, `Color.MissingWorkingSpaceError`, `Color.UnsupportedTargetError`, `Color.ICC.ParseError`.
 
-## Supported Elixir and OTP Releases
+## Supported Elixir and OTP versions
 
 `Color` is supported on Elixir 1.17+ and OTP 26+.
 
-## Quick Start
+## Quick start
 
 Add `:color` to your `mix.exs` dependencies:
 
 ```elixir
 def deps do
   [
-    {:color, "~> 0.1.0"}
+    {:color, "~> 1.0"}
   ]
 end
 ```
@@ -134,7 +134,7 @@ Generate design-system palettes from a single seed colour:
 ```elixir
 # Tailwind / Radix style tonal scale
 scale = Color.Palette.tonal("#3b82f6", name: "blue")
-Map.fetch!(scale.stops, 500) |> Color.to_hex()  # => seed (snapped)
+Map.fetch!(scale.stops, 500) |> Color.to_hex!()  # => seed (snapped)
 
 # Material Design 3 style theme — five coordinated scales from one seed
 theme = Color.Palette.theme("#3b82f6")
@@ -178,7 +178,7 @@ Color.CSS.to_css(c)
 {:ok, c} = Color.CSS.parse("rgb(from oklch(0.7 0.15 180) calc(r * 0.9) g b)")
 ```
 
-### ~COLOR Sigil
+### ~COLOR sigil
 
 ```elixir
 import Color.Sigil

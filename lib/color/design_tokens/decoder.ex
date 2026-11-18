@@ -40,9 +40,8 @@ defmodule Color.DesignTokens.Decoder do
       when is_binary(space) and is_list(components) do
     alpha = Map.get(value, "alpha")
 
-    with :ok <- validate_alpha(alpha),
-         {:ok, struct} <- from_components(space, components, alpha) do
-      {:ok, struct}
+    with :ok <- validate_alpha(alpha) do
+      from_components(space, components, alpha)
     end
   end
 

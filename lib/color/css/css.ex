@@ -290,9 +290,8 @@ defmodule Color.CSS do
   end
 
   def to_css(color, options) do
-    with {:ok, srgb} <- Color.convert(color, Color.SRGB) do
-      to_css(srgb, options)
-    else
+    case Color.convert(color, Color.SRGB) do
+      {:ok, srgb} -> to_css(srgb, options)
       _ -> raise %Color.UnsupportedTargetError{target: color}
     end
   end
@@ -731,14 +730,14 @@ defmodule Color.CSS do
       case List.last(tokens) do
         {:percent, p} ->
           rest = Enum.drop(tokens, -1)
-          color_text = rest |> Enum.map(&stringify_token/1) |> Enum.join(" ")
+          color_text = Enum.map_join(rest, " ", &stringify_token/1)
 
           with {:ok, color} <- parse(color_text) do
             {:ok, color, p / 100}
           end
 
         _ ->
-          color_text = tokens |> Enum.map(&stringify_token/1) |> Enum.join(" ")
+          color_text = Enum.map_join(tokens, " ", &stringify_token/1)
 
           with {:ok, color} <- parse(color_text) do
             {:ok, color, nil}

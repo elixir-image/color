@@ -220,7 +220,7 @@ defmodule Color.Palette do
   ### Examples
 
       iex> hexes = ["#808080", "#ff0000", "#00ff00", "#0000ff"]
-      iex> hexes |> Color.Palette.sort() |> Enum.map(&Color.to_hex/1)
+      iex> hexes |> Color.Palette.sort() |> Enum.map(&Color.to_hex!/1)
       ["#808080", "#ff0000", "#00ff00", "#0000ff"]
 
   """

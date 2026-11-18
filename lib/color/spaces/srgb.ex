@@ -196,14 +196,12 @@ defmodule Color.SRGB do
   def parse("#" <> rest), do: parse_hex(rest)
 
   def parse(string) when is_binary(string) do
-    cond do
-      hex_like?(string) ->
-        parse_hex(string)
-
-      true ->
-        with {:ok, rgb} <- Color.CSS.Names.lookup(string) do
-          {:ok, unscale255(rgb)}
-        end
+    if hex_like?(string) do
+      parse_hex(string)
+    else
+      with {:ok, rgb} <- Color.CSS.Names.lookup(string) do
+        {:ok, unscale255(rgb)}
+      end
     end
   end
 

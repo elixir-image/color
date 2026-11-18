@@ -53,7 +53,7 @@ defmodule Color.DesignTokens do
   a hex-only fallback:
 
       iex> {:ok, srgb} = Color.DesignTokens.decode(%{"hex" => "#3b82f6"})
-      iex> Color.to_hex(srgb)
+      iex> Color.to_hex!(srgb)
       "#3b82f6"
 
   Unknown colour spaces or malformed input return
@@ -204,7 +204,7 @@ defmodule Color.DesignTokens do
 
   ### Examples
 
-      iex> Color.DesignTokens.decode!(%{"hex" => "#3b82f6"}) |> Color.to_hex()
+      iex> Color.DesignTokens.decode!(%{"hex" => "#3b82f6"}) |> Color.to_hex!()
       "#3b82f6"
 
   """

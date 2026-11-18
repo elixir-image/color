@@ -1,4 +1,14 @@
 defmodule Color.RGB.WorkingSpace do
+  @moduledoc """
+  Named RGB working-space data (chromaticities, white point, gamma) and
+  conversion-matrix construction for the 24 working spaces this library
+  supports (sRGB, Adobe RGB, Display P3, Rec. 709, Rec. 2020, ProPhoto,
+  …). The table is parsed at compile time from the canonical Bruce
+  Lindbloom chromaticity data; conversion matrices are cached in
+  `:persistent_term` so repeated lookups for the same named space are
+  constant-time after the first call.
+  """
+
   # RGB Observer angle is CIE1931 2°
   @rgb_observer_angle 2
 

@@ -691,22 +691,20 @@ defmodule Color.Spectral.Tables do
     for lambda <- @wavelengths do
       lambda_i = :erlang.trunc(lambda)
 
-      cond do
-        lambda_i < start or lambda_i > max_wavelength ->
-          0.0
+      if lambda_i < start or lambda_i > max_wavelength do
+        0.0
+      else
+        offset = lambda_i - start
+        q = div(offset, step)
+        r = offset - q * step
 
-        true ->
-          offset = lambda_i - start
-          q = div(offset, step)
-          r = offset - q * step
-
-          if r == 0 do
-            :erlang.element(q + 1, tuple)
-          else
-            v1 = :erlang.element(q + 1, tuple)
-            v2 = :erlang.element(q + 2, tuple)
-            v1 + r / step * (v2 - v1)
-          end
+        if r == 0 do
+          :erlang.element(q + 1, tuple)
+        else
+          v1 = :erlang.element(q + 1, tuple)
+          v2 = :erlang.element(q + 2, tuple)
+          v1 + r / step * (v2 - v1)
+        end
       end
     end
   end

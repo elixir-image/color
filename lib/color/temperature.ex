@@ -1,3 +1,7 @@
+# credo:disable-for-this-file Credo.Check.Readability.LargeNumbers
+# Polynomial coefficients from CIE 15.3 Planckian and daylight locus formulas
+# are carried verbatim from the published spec; underscoring the mantissa of
+# the scientific-notation literals (`0.2661239e9`) obscures the published form.
 defmodule Color.Temperature do
   @moduledoc """
   Correlated colour temperature (CCT) on the Planckian locus.

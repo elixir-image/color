@@ -127,6 +127,7 @@ defmodule Color.Spectral do
   @spec blackbody(number()) :: t()
   def blackbody(temperature) when is_number(temperature) and temperature > 0 do
     # Planck's second radiation constant in nm·K.
+    # credo:disable-for-next-line Credo.Check.Readability.LargeNumbers
     c2 = 1.4388e7
 
     values =

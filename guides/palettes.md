@@ -231,19 +231,19 @@ theme = Color.Palette.theme(brand)
 # CSS custom properties for light scheme
 css = """
 :root {
-  --primary: #{Color.to_hex(Color.Palette.Theme.role(theme, :primary) |> elem(1))};
-  --on-primary: #{Color.to_hex(Color.Palette.Theme.role(theme, :on_primary) |> elem(1))};
-  --surface: #{Color.to_hex(Color.Palette.Theme.role(theme, :surface) |> elem(1))};
-  --on-surface: #{Color.to_hex(Color.Palette.Theme.role(theme, :on_surface) |> elem(1))};
-  --outline: #{Color.to_hex(Color.Palette.Theme.role(theme, :outline) |> elem(1))};
+  --primary: #{Color.to_hex!(Color.Palette.Theme.role(theme, :primary) |> elem(1))};
+  --on-primary: #{Color.to_hex!(Color.Palette.Theme.role(theme, :on_primary) |> elem(1))};
+  --surface: #{Color.to_hex!(Color.Palette.Theme.role(theme, :surface) |> elem(1))};
+  --on-surface: #{Color.to_hex!(Color.Palette.Theme.role(theme, :on_surface) |> elem(1))};
+  --outline: #{Color.to_hex!(Color.Palette.Theme.role(theme, :outline) |> elem(1))};
 }
 
 [data-theme="dark"] {
-  --primary: #{Color.to_hex(Color.Palette.Theme.role(theme, :primary, scheme: :dark) |> elem(1))};
-  --on-primary: #{Color.to_hex(Color.Palette.Theme.role(theme, :on_primary, scheme: :dark) |> elem(1))};
-  --surface: #{Color.to_hex(Color.Palette.Theme.role(theme, :surface, scheme: :dark) |> elem(1))};
-  --on-surface: #{Color.to_hex(Color.Palette.Theme.role(theme, :on_surface, scheme: :dark) |> elem(1))};
-  --outline: #{Color.to_hex(Color.Palette.Theme.role(theme, :outline, scheme: :dark) |> elem(1))};
+  --primary: #{Color.to_hex!(Color.Palette.Theme.role(theme, :primary, scheme: :dark) |> elem(1))};
+  --on-primary: #{Color.to_hex!(Color.Palette.Theme.role(theme, :on_primary, scheme: :dark) |> elem(1))};
+  --surface: #{Color.to_hex!(Color.Palette.Theme.role(theme, :surface, scheme: :dark) |> elem(1))};
+  --on-surface: #{Color.to_hex!(Color.Palette.Theme.role(theme, :on_surface, scheme: :dark) |> elem(1))};
+  --outline: #{Color.to_hex!(Color.Palette.Theme.role(theme, :outline, scheme: :dark) |> elem(1))};
 }
 """
 ```

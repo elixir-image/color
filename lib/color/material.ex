@@ -125,7 +125,7 @@ defmodule Color.Material do
       0.2
 
       iex> mat = Color.Material.new("red")
-      iex> Color.to_hex(mat.base_color)
+      iex> Color.to_hex!(mat.base_color)
       "#ff0000"
       iex> mat.metallic
       0.0
@@ -161,7 +161,7 @@ defmodule Color.Material do
   ### Examples
 
       iex> mat = Color.Material.new("#ff0000")
-      iex> Color.to_hex(Color.Material.base_color(mat))
+      iex> Color.to_hex!(Color.Material.base_color(mat))
       "#ff0000"
 
   """

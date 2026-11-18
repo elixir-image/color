@@ -12,7 +12,7 @@ The visualizer is opt-in. The core `color` library has zero runtime dependencies
 # mix.exs
 def deps do
   [
-    {:color, "~> 0.4"},
+    {:color, "~> 1.0"},
     {:plug, "~> 1.15"},
     {:bandit, "~> 1.5"}
   ]

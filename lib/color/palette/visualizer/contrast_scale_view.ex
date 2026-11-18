@@ -133,7 +133,7 @@ defmodule Color.Palette.Visualizer.ContrastScaleView do
       Enum.map(labels, fn label ->
         color = Map.fetch!(palette.stops, label)
         achieved = Map.fetch!(palette.achieved, label)
-        hex = Color.to_hex(color)
+        hex = Color.to_hex!(color)
         text_color = Render.text_on(color)
         seed_class = if label == palette.seed_stop, do: " vz-seed", else: ""
 

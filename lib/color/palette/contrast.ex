@@ -408,6 +408,10 @@ defmodule Color.Palette.Contrast do
     end
   end
 
+  # Numerical bisection over Oklch lightness: `lo`/`hi` bracket, `target` contrast,
+  # fixed `h`/`c`/`bg`/`metric`/`gamut`, plus `direction` and iteration budget.
+  # Packing these into a struct would be ceremony without clarity.
+  # credo:disable-for-next-line Credo.Check.Refactor.FunctionArity
   defp bisect(lo, hi, target, h, c, bg, metric, gamut, direction, iterations) do
     mid = (lo + hi) / 2
     {:ok, mapped} = Color.Gamut.to_gamut(%Color.Oklch{l: mid, c: c, h: h}, gamut)

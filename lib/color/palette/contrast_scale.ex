@@ -388,7 +388,7 @@ defmodule Color.Palette.ContrastScale do
     body =
       Enum.map_join(labels, "", fn label ->
         color = Map.fetch!(palette.stops, label)
-        "  --#{name}-#{label}: #{Color.to_hex(color)};\n"
+        "  --#{name}-#{label}: #{Color.to_hex!(color)};\n"
       end)
 
     "#{selector} {\n#{body}}\n"
@@ -414,7 +414,7 @@ defmodule Color.Palette.ContrastScale do
     body =
       Enum.map_join(labels, "", fn label ->
         color = Map.fetch!(palette.stops, label)
-        "  --color-#{name}-#{label}: #{Color.to_hex(color)};\n"
+        "  --color-#{name}-#{label}: #{Color.to_hex!(color)};\n"
       end)
 
     "@theme {\n#{body}}\n"
@@ -460,6 +460,10 @@ defmodule Color.Palette.ContrastScale do
     end
   end
 
+  # Numerical bisection over Oklch lightness: `lo`/`hi` bracket, `target` contrast,
+  # fixed `hue`/`chroma`/`bg`/`metric`/`gamut`, plus `direction` and iteration budget.
+  # Packing these into a struct would be ceremony without clarity.
+  # credo:disable-for-next-line Credo.Check.Refactor.FunctionArity
   defp bisect(lo, hi, target, hue, chroma, bg, metric, gamut, direction, iterations) do
     mid = (lo + hi) / 2
     {achieved, color} = probe(mid, hue, chroma, bg, metric, gamut)

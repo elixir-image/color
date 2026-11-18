@@ -14,15 +14,15 @@ defmodule Color.Conversion.Lindbloom do
 
   ### Constants
 
-  * `ε = 216/24389 ≈ 0.008856`.
+  * `ε = 216/24_389 ≈ 0.008856`.
 
-  * `κ = 24389/27 ≈ 903.2963`.
+  * `κ = 24_389/27 ≈ 903.2963`.
 
   """
 
   # CIE standard (exact rational form, per Lindbloom)
-  @epsilon 216 / 24389
-  @kappa 24389 / 27
+  @epsilon 216 / 24_389
+  @kappa 24_389 / 27
 
   @doc """
   Returns the CIE constants `ε` and `κ` used by the conversions.

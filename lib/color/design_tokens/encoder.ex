@@ -107,7 +107,7 @@ defmodule Color.DesignTokens.Encoder do
   defp round_component(n), do: n
 
   defp hex_or_nil(struct) do
-    Color.to_hex(struct)
+    Color.to_hex!(struct)
   rescue
     _ -> nil
   end

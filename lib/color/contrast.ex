@@ -194,18 +194,20 @@ defmodule Color.Contrast do
         # Normal polarity — darker text on lighter background.
         sapc = (:math.pow(yb, 0.56) - :math.pow(yt, 0.57)) * 1.14
 
-        cond do
-          sapc < 0.1 -> 0.0
-          true -> (sapc - 0.027) * 100
+        if sapc < 0.1 do
+          0.0
+        else
+          (sapc - 0.027) * 100
         end
 
       true ->
         # Reverse polarity — lighter text on darker background.
         sapc = (:math.pow(yb, 0.65) - :math.pow(yt, 0.62)) * 1.14
 
-        cond do
-          sapc > -0.1 -> 0.0
-          true -> (sapc + 0.027) * 100
+        if sapc > -0.1 do
+          0.0
+        else
+          (sapc + 0.027) * 100
         end
     end
   end

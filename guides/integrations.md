@@ -290,7 +290,7 @@ report = Color.Palette.gamut_report(palette, :SRGB)
 # }
 
 for %{label: l, color: c} <- report.out_of_gamut do
-  IO.puts("Stop #{l} (#{Color.to_hex(c)}) is outside sRGB")
+  IO.puts("Stop #{l} (#{Color.to_hex!(c)}) is outside sRGB")
 end
 ```
 
@@ -316,7 +316,7 @@ defmodule Mix.Tasks.Brand.Audit do
       Mix.shell().info("✓ Palette is fully inside #{target}")
     else
       bad = Enum.map(report.out_of_gamut, fn %{label: l, color: c} ->
-        "  - stop #{l} (#{Color.to_hex(c)})"
+        "  - stop #{l} (#{Color.to_hex!(c)})"
       end)
 
       Mix.raise("✗ Palette has #{length(report.out_of_gamut)} stops outside #{target}:\n" <>
@@ -339,7 +339,7 @@ token = raw["color"]["primary"]
 case Color.DesignTokens.decode(token) do
   {:ok, %Color.Oklch{} = oklch} ->
     # use it
-    Color.to_hex(oklch)
+    Color.to_hex!(oklch)
 
   {:error, %Color.DesignTokensDecodeError{reason: :alias_not_resolved}} ->
     # the caller has the full token tree, resolve and retry

@@ -136,12 +136,12 @@ defmodule Color.Palette.Visualizer.ThemeView do
 
             pair_role ->
               case Theme.role(theme, pair_role, scheme: scheme) do
-                {:ok, paired} -> Color.to_hex(paired)
+                {:ok, paired} -> Color.to_hex!(paired)
                 _ -> Render.text_on(color)
               end
           end
 
-        hex = Color.to_hex(color)
+        hex = Color.to_hex!(color)
 
         [
           "<div class=\"vz-role\" style=\"background:",

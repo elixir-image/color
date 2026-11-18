@@ -1,4 +1,6 @@
-# Plan: image → palette extraction in the `:image` library
+# Image palette extraction
+
+**Status:** reference, 2026-11-18
 
 This is an implementation plan for adding **image → palette
 extraction** (the third improvement from the Hinton blog-post
@@ -8,7 +10,8 @@ already provides everything needed *downstream* of the pixel
 phase (`Color.Palette.Cluster`, `Color.Palette.Summarize`,
 `Color.Palette.Sort`, the `/spectrum` visualiser); the missing
 link is a robust pixel → clusters step that lives where the
-pixels live.
+pixels live. The work tracked here is in the `:image` library,
+not this repository.
 
 ## Status (as of `:color` 0.13.0)
 

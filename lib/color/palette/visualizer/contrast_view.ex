@@ -72,7 +72,7 @@ defmodule Color.Palette.Visualizer.ContrastView do
             ]
 
           %{color: color, target: t, achieved: a} ->
-            hex = Color.to_hex(color)
+            hex = Color.to_hex!(color)
             text_color = Render.text_on(color)
 
             [
@@ -139,9 +139,9 @@ defmodule Color.Palette.Visualizer.ContrastView do
                   "<td class=\"",
                   class,
                   "\"><span style=\"background:",
-                  Color.to_hex(color),
+                  Color.to_hex!(color),
                   ";color:",
-                  Color.to_hex(bg),
+                  Color.to_hex!(bg),
                   ";padding:2px 6px;border-radius:4px;margin-right:6px\">Aa</span>",
                   symbol,
                   "</td>"

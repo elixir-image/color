@@ -1029,14 +1029,14 @@ defmodule Color.PaletteTest do
     test "primary colours land in rainbow order" do
       hexes = ["#0000ff", "#ff0000", "#00ff00", "#ffff00"]
 
-      result = hexes |> Sort.sort() |> Enum.map(&Color.to_hex/1)
+      result = hexes |> Sort.sort() |> Enum.map(&Color.to_hex!/1)
       assert result == ["#ff0000", "#ffff00", "#00ff00", "#0000ff"]
     end
 
     test "grays bucket to the front by default, sorted dark to light" do
       hexes = ["#ff0000", "#ffffff", "#000000", "#808080", "#00ff00"]
 
-      result = hexes |> Sort.sort() |> Enum.map(&Color.to_hex/1)
+      result = hexes |> Sort.sort() |> Enum.map(&Color.to_hex!/1)
       # Grays first (dark→light), then chromatic rainbow.
       assert result == ["#000000", "#808080", "#ffffff", "#ff0000", "#00ff00"]
     end
@@ -1044,14 +1044,14 @@ defmodule Color.PaletteTest do
     test ":grays :after places achromatic colours at the end" do
       hexes = ["#808080", "#ff0000", "#00ff00"]
 
-      result = Sort.sort(hexes, grays: :after) |> Enum.map(&Color.to_hex/1)
+      result = Sort.sort(hexes, grays: :after) |> Enum.map(&Color.to_hex!/1)
       assert result == ["#ff0000", "#00ff00", "#808080"]
     end
 
     test ":grays :exclude drops achromatic colours entirely" do
       hexes = ["#808080", "#ff0000", "#000000", "#00ff00"]
 
-      result = Sort.sort(hexes, grays: :exclude) |> Enum.map(&Color.to_hex/1)
+      result = Sort.sort(hexes, grays: :exclude) |> Enum.map(&Color.to_hex!/1)
       assert result == ["#ff0000", "#00ff00"]
     end
 
@@ -1080,7 +1080,7 @@ defmodule Color.PaletteTest do
       # With origin at 180° (roughly cyan), the rainbow starts
       # after cyan, meaning blue comes first, then red wraps
       # around, then green.
-      result = Sort.sort(hexes, hue_origin: 180.0) |> Enum.map(&Color.to_hex/1)
+      result = Sort.sort(hexes, hue_origin: 180.0) |> Enum.map(&Color.to_hex!/1)
       assert result == ["#0000ff", "#ff0000", "#00ff00"]
     end
 
@@ -1088,7 +1088,7 @@ defmodule Color.PaletteTest do
       # Two shades of blue, hue essentially the same.
       hexes = ["#7fa5ff", "#0000ff"]
 
-      result = Sort.sort(hexes) |> Enum.map(&Color.to_hex/1)
+      result = Sort.sort(hexes) |> Enum.map(&Color.to_hex!/1)
       # Darker blue first, lighter second.
       assert result == ["#0000ff", "#7fa5ff"]
     end
@@ -1120,7 +1120,7 @@ defmodule Color.PaletteTest do
 
       result =
         Sort.sort(hexes, strategy: :stepped_hue, buckets: 4)
-        |> Enum.map(&Color.to_hex/1)
+        |> Enum.map(&Color.to_hex!/1)
 
       assert result == ["#400000", "#ff8080", "#80ff80", "#004000"]
     end
@@ -1136,7 +1136,7 @@ defmodule Color.PaletteTest do
     test "sorts dark to light regardless of hue" do
       hexes = ["#ffffff", "#ff0000", "#000000", "#00ff00"]
 
-      result = Sort.sort(hexes, strategy: :lightness) |> Enum.map(&Color.to_hex/1)
+      result = Sort.sort(hexes, strategy: :lightness) |> Enum.map(&Color.to_hex!/1)
       # black, red, green, white (ordered by Oklch L).
       assert result == ["#000000", "#ff0000", "#00ff00", "#ffffff"]
     end
@@ -1192,7 +1192,7 @@ defmodule Color.PaletteTest do
       result = Summarize.summarize(reds ++ blues, 2)
 
       assert length(result) == 2
-      hexes = Enum.map(result, &Color.to_hex/1)
+      hexes = Enum.map(result, &Color.to_hex!/1)
       # One representative is reddish, the other bluish.
       assert Enum.any?(hexes, &String.starts_with?(&1, "#ff")) or
                Enum.any?(hexes, &String.starts_with?(&1, "#fa")) or
@@ -1203,7 +1203,7 @@ defmodule Color.PaletteTest do
 
     test "returns input unchanged when length(colors) <= k" do
       hexes = ["#ff0000", "#0000ff"]
-      result = Summarize.summarize(hexes, 5) |> Enum.map(&Color.to_hex/1)
+      result = Summarize.summarize(hexes, 5) |> Enum.map(&Color.to_hex!/1)
 
       assert result == ["#ff0000", "#0000ff"]
     end
@@ -1218,7 +1218,7 @@ defmodule Color.PaletteTest do
       muted_b = "#dd5555"
 
       [rep] = Summarize.summarize([muted_a, vivid, muted_b], 1)
-      assert Color.to_hex(rep) == "#ff0000"
+      assert Color.to_hex!(rep) == "#ff0000"
     end
 
     test "achromatic clusters return the closest-to-centroid member" do
@@ -1228,7 +1228,7 @@ defmodule Color.PaletteTest do
       hexes = ["#404040", "#808080", "#c0c0c0"]
 
       [rep] = Summarize.summarize(hexes, 1)
-      assert Color.to_hex(rep) == "#808080"
+      assert Color.to_hex!(rep) == "#808080"
     end
 
     test "weights pull the centroid toward the heavier inputs" do
@@ -1251,7 +1251,7 @@ defmodule Color.PaletteTest do
       hexes = ["#a0c0e0", "#10203f", "#ff8800", "#ffe000", "#a0a0a0"]
       input_set = MapSet.new(hexes)
 
-      result = Summarize.summarize(hexes, 3) |> Enum.map(&Color.to_hex/1)
+      result = Summarize.summarize(hexes, 3) |> Enum.map(&Color.to_hex!/1)
 
       assert length(result) == 3
       Enum.each(result, fn hex -> assert hex in input_set end)
@@ -1295,10 +1295,10 @@ defmodule Color.PaletteTest do
 
       assert c1.mass == 1.0
       assert length(c1.members) == 1
-      assert hd(c1.members).output |> Color.to_hex() == "#ff0000"
+      assert hd(c1.members).output |> Color.to_hex!() == "#ff0000"
 
       assert c2.mass == 1.0
-      assert hd(c2.members).output |> Color.to_hex() == "#0000ff"
+      assert hd(c2.members).output |> Color.to_hex!() == "#0000ff"
     end
 
     test "honours explicit weights" do
@@ -1429,7 +1429,7 @@ defmodule Color.PaletteTest do
         Cluster.from_colors(["#cc4040", "#ff0000", "#dd5555"])
         |> Cluster.merge_until(1)
 
-      assert Cluster.representative(cluster) |> Color.to_hex() == "#ff0000"
+      assert Cluster.representative(cluster) |> Color.to_hex!() == "#ff0000"
     end
 
     test "achromatic clusters return the closest-to-centroid member" do
@@ -1437,7 +1437,7 @@ defmodule Color.PaletteTest do
         Cluster.from_colors(["#404040", "#808080", "#c0c0c0"])
         |> Cluster.merge_until(1)
 
-      assert Cluster.representative(cluster) |> Color.to_hex() == "#808080"
+      assert Cluster.representative(cluster) |> Color.to_hex!() == "#808080"
     end
 
     test "honours :rep_chroma_threshold by routing borderline-chromatic clusters either way" do
@@ -1484,14 +1484,14 @@ defmodule Color.PaletteTest do
       mat = Material.new("#ff0000", metallic: 1.0, roughness: 0.3)
 
       assert %Color.SRGB{} = mat.base_color
-      assert Color.to_hex(mat.base_color) == "#ff0000"
+      assert Color.to_hex!(mat.base_color) == "#ff0000"
       assert mat.metallic == 1.0
       assert mat.roughness == 0.3
     end
 
     test "accepts CSS named colours" do
       mat = Material.new("saddlebrown")
-      assert Color.to_hex(mat.base_color) == "#8b4513"
+      assert Color.to_hex!(mat.base_color) == "#8b4513"
     end
 
     test "accepts a pre-parsed SRGB struct" do
@@ -1624,7 +1624,7 @@ defmodule Color.PaletteTest do
       # second, gold metal last.
       assert [%Material{name: "red mat"}, %Color.SRGB{} = blue, %Material{name: "gold"}] = sorted
 
-      assert Color.to_hex(blue) == "#0000ff"
+      assert Color.to_hex!(blue) == "#0000ff"
     end
 
     test "preserves Material structs in output" do

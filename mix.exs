@@ -1,7 +1,7 @@
 defmodule Color.MixProject do
   use Mix.Project
 
-  @version "0.13.0"
+  @version "1.0.0"
 
   def project do
     [
@@ -158,8 +158,9 @@ defmodule Color.MixProject do
       # library keeps its zero-runtime-deps story.
       {:plug, "~> 1.15", optional: true},
       {:bandit, "~> 1.5", optional: true},
-      {:ex_doc, "~> 0.32", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.32", only: [:dev, :release], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:benchee, "~> 1.3", only: [:dev], runtime: false},
       {:stream_data, "~> 1.1", only: [:test], runtime: false}
     ] ++ maybe_json_polyfill()

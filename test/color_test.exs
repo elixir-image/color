@@ -697,7 +697,7 @@ defmodule ColorTest do
 
     test "parse/1 16-colour foreground" do
       assert {:ok, %Color.SRGB{} = c, :foreground} = Color.ANSI.parse("\e[31m")
-      assert Color.to_hex(c) == "#aa0000"
+      assert Color.to_hex!(c) == "#aa0000"
     end
 
     test "parse/1 16-colour background" do
@@ -706,33 +706,33 @@ defmodule ColorTest do
 
     test "parse/1 bright 16-colour" do
       assert {:ok, c, :foreground} = Color.ANSI.parse("\e[91m")
-      assert Color.to_hex(c) == "#ff5555"
+      assert Color.to_hex!(c) == "#ff5555"
 
       assert {:ok, _, :background} = Color.ANSI.parse("\e[101m")
     end
 
     test "parse/1 256-colour" do
       assert {:ok, c, :foreground} = Color.ANSI.parse("\e[38;5;196m")
-      assert Color.to_hex(c) == "#ff0000"
+      assert Color.to_hex!(c) == "#ff0000"
 
       assert {:ok, c, :background} = Color.ANSI.parse("\e[48;5;21m")
       # Cube index 21 = (0, 0, 255)
-      assert Color.to_hex(c) == "#0000ff"
+      assert Color.to_hex!(c) == "#0000ff"
     end
 
     test "parse/1 truecolor" do
       assert {:ok, c, :foreground} = Color.ANSI.parse("\e[38;2;123;45;67m")
-      assert Color.to_hex(c) == "#7b2d43"
+      assert Color.to_hex!(c) == "#7b2d43"
     end
 
     test "parse/1 ignores style parameters before the colour" do
       assert {:ok, c, :foreground} = Color.ANSI.parse("\e[1;31m")
-      assert Color.to_hex(c) == "#aa0000"
+      assert Color.to_hex!(c) == "#aa0000"
     end
 
     test "parse/1 ignores style parameters after the colour" do
       assert {:ok, c, :foreground} = Color.ANSI.parse("\e[31;1m")
-      assert Color.to_hex(c) == "#aa0000"
+      assert Color.to_hex!(c) == "#aa0000"
     end
 
     test "parse/1 returns an error on the reset sequence" do
@@ -769,7 +769,7 @@ defmodule ColorTest do
       for hex <- ["#ff0000", "#00ff00", "#0000ff", "#abcdef", "#123456"] do
         encoded = Color.ANSI.to_string(hex)
         assert {:ok, srgb, :foreground} = Color.ANSI.parse(encoded)
-        assert Color.to_hex(srgb) == hex
+        assert Color.to_hex!(srgb) == hex
       end
     end
 
@@ -807,83 +807,83 @@ defmodule ColorTest do
     end
   end
 
-  describe "Color.to_hex/1 and Color.to_css/1,2" do
+  describe "Color.to_hex!/1 and Color.to_css!/1,2" do
     test "to_hex accepts any input form" do
-      assert Color.to_hex("#ff0000") == "#ff0000"
-      assert Color.to_hex("red") == "#ff0000"
-      assert Color.to_hex(:rebecca_purple) == "#663399"
-      assert Color.to_hex([1.0, 0.0, 0.0]) == "#ff0000"
-      assert Color.to_hex([255, 128, 0]) == "#ff8000"
-      assert Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}) == "#ff0000"
+      assert Color.to_hex!("#ff0000") == "#ff0000"
+      assert Color.to_hex!("red") == "#ff0000"
+      assert Color.to_hex!(:rebecca_purple) == "#663399"
+      assert Color.to_hex!([1.0, 0.0, 0.0]) == "#ff0000"
+      assert Color.to_hex!([255, 128, 0]) == "#ff8000"
+      assert Color.to_hex!(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}) == "#ff0000"
     end
 
     test "to_hex converts non-sRGB colours through sRGB first" do
       # Lab red ≈ sRGB red
       lab = %Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}
-      assert Color.to_hex(lab) == "#ff0000"
+      assert Color.to_hex!(lab) == "#ff0000"
     end
 
     test "to_hex emits #rrggbbaa for translucent alpha" do
-      assert Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5}) ==
+      assert Color.to_hex!(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5}) ==
                "#ff000080"
     end
 
     test "to_hex raises a typed exception on invalid input" do
       assert_raise Color.InvalidComponentError, fn ->
-        Color.to_hex([1.5, 0.0, 0.0])
+        Color.to_hex!([1.5, 0.0, 0.0])
       end
 
       assert_raise Color.UnknownColorNameError, fn ->
-        Color.to_hex("notacolor")
+        Color.to_hex!("notacolor")
       end
     end
 
     test "to_css returns the canonical per-struct form" do
-      assert Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}) == "rgb(255 0 0)"
-      assert Color.to_css(%Color.Lab{l: 50.0, a: 40.0, b: 30.0}) == "lab(50% 40 30)"
-      assert Color.to_css(%Color.Oklch{l: 0.7, c: 0.15, h: 180.0}) == "oklch(70% 0.15 180)"
+      assert Color.to_css!(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}) == "rgb(255 0 0)"
+      assert Color.to_css!(%Color.Lab{l: 50.0, a: 40.0, b: 30.0}) == "lab(50% 40 30)"
+      assert Color.to_css!(%Color.Oklch{l: 0.7, c: 0.15, h: 180.0}) == "oklch(70% 0.15 180)"
     end
 
     test "to_css accepts string + atom + list inputs via new/1" do
-      assert Color.to_css("#ff0000") == "rgb(255 0 0)"
-      assert Color.to_css("rebeccapurple") == "rgb(102 51 153)"
-      assert Color.to_css(:red) == "rgb(255 0 0)"
-      assert Color.to_css([1.0, 0.5, 0.0]) == "rgb(255 128 0)"
-      assert Color.to_css([255, 0, 0]) == "rgb(255 0 0)"
+      assert Color.to_css!("#ff0000") == "rgb(255 0 0)"
+      assert Color.to_css!("rebeccapurple") == "rgb(102 51 153)"
+      assert Color.to_css!(:red) == "rgb(255 0 0)"
+      assert Color.to_css!([1.0, 0.5, 0.0]) == "rgb(255 128 0)"
+      assert Color.to_css!([255, 0, 0]) == "rgb(255 0 0)"
     end
 
     test "to_css preserves alpha" do
-      assert Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5}) ==
+      assert Color.to_css!(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5}) ==
                "rgb(255 0 0 / 0.5)"
     end
 
     test "to_css honours the :as option for sRGB" do
       red = %Color.SRGB{r: 1.0, g: 0.0, b: 0.0}
-      assert Color.to_css(red, as: :hex) == "#ff0000"
-      assert Color.to_css(red, as: :rgb) == "rgb(255 0 0)"
-      assert Color.to_css(red, as: :color) == "color(srgb 1 0 0)"
+      assert Color.to_css!(red, as: :hex) == "#ff0000"
+      assert Color.to_css!(red, as: :rgb) == "rgb(255 0 0)"
+      assert Color.to_css!(red, as: :color) == "color(srgb 1 0 0)"
     end
 
     test "to_css raises a typed exception on invalid input" do
       assert_raise Color.InvalidComponentError, fn ->
-        Color.to_css([300, 0, 0])
+        Color.to_css!([300, 0, 0])
       end
     end
 
     test "to_ansi delegates to Color.ANSI.to_string" do
-      assert Color.to_ansi("red") == Color.ANSI.to_string("red")
-      assert Color.to_ansi("red", mode: :ansi256) == "\e[38;5;196m"
-      assert Color.to_ansi("red", mode: :ansi16) == "\e[91m"
-      assert Color.to_ansi("red", layer: :background) == "\e[48;2;255;0;0m"
+      assert Color.to_ansi!("red") == Color.ANSI.to_string("red")
+      assert Color.to_ansi!("red", mode: :ansi256) == "\e[38;5;196m"
+      assert Color.to_ansi!("red", mode: :ansi16) == "\e[91m"
+      assert Color.to_ansi!("red", layer: :background) == "\e[48;2;255;0;0m"
 
       # Accepts non-sRGB input via new/1
       lab_red = %Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}
-      assert Color.to_ansi(lab_red) == "\e[38;2;255;0;0m"
+      assert Color.to_ansi!(lab_red) == "\e[38;2;255;0;0m"
     end
 
     test "to_ansi raises a typed exception on invalid input" do
       assert_raise Color.InvalidComponentError, fn ->
-        Color.to_ansi([1.5, 0.0, 0.0])
+        Color.to_ansi!([1.5, 0.0, 0.0])
       end
     end
   end

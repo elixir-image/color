@@ -128,24 +128,22 @@ defmodule Color.Palette.Visualizer.SortView do
   # ---- body --------------------------------------------------------------
 
   defp build_body(inputs, strategy, chroma_threshold, hue_origin, grays, buckets) do
-    try do
-      sorted =
-        Sort.sort(inputs,
-          strategy: strategy,
-          chroma_threshold: chroma_threshold,
-          hue_origin: hue_origin,
-          grays: grays,
-          buckets: buckets
-        )
+    sorted =
+      Sort.sort(inputs,
+        strategy: strategy,
+        chroma_threshold: chroma_threshold,
+        hue_origin: hue_origin,
+        grays: grays,
+        buckets: buckets
+      )
 
-      {success_body(inputs, sorted, strategy), nil}
-    rescue
-      e in Color.PaletteError ->
-        {[], Exception.message(e)}
+    {success_body(inputs, sorted, strategy), nil}
+  rescue
+    e in Color.PaletteError ->
+      {[], Exception.message(e)}
 
-      e ->
-        {[], Exception.message(e)}
-    end
+    e ->
+      {[], Exception.message(e)}
   end
 
   defp success_body(inputs, sorted, strategy) do
@@ -172,7 +170,7 @@ defmodule Color.Palette.Visualizer.SortView do
   end
 
   defp swatch(color) do
-    hex = Color.to_hex(color)
+    hex = Color.to_hex!(color)
     {:ok, oklch} = Color.convert(color, Color.Oklch)
     text = Render.text_on(color)
 

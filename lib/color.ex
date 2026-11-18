@@ -1185,6 +1185,8 @@ defmodule Color do
     method = Keyword.get(options, :adaptation, :bradford)
 
     Enum.reduce_while(colors, {:ok, []}, fn input, {:ok, acc} ->
+      # `else` is required to transform an error return into the `{:halt, err}`
+      # tuple shape that `Enum.reduce_while/3` expects.
       with {:ok, color} <- new(input),
            {:ok, xyz} <- to_xyz(color),
            {:ok, xyz} <- adapt_for(xyz, target, intent, method, bpc),
@@ -1240,6 +1242,8 @@ defmodule Color do
 
     with {:ok, info} <- Color.RGB.WorkingSpace.rgb_conversion_matrix(working_space) do
       Enum.reduce_while(colors, {:ok, []}, fn input, {:ok, acc} ->
+        # `else` is required to transform an error return into the `{:halt, err}`
+        # tuple shape that `Enum.reduce_while/3` expects.
         with {:ok, color} <- new(input),
              {:ok, xyz} <- to_xyz(color),
              {:ok, xyz} <-
@@ -1691,33 +1695,52 @@ defmodule Color do
 
   ### Returns
 
-  * A string.
+  * `{:ok, string}`, or
+
+  * `{:error, exception}` where `exception` is a typed error struct.
 
   ### Examples
 
       iex> Color.to_css("#ff0000")
-      "rgb(255 0 0)"
+      {:ok, "rgb(255 0 0)"}
 
       iex> Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5})
-      "rgb(255 0 0 / 0.5)"
+      {:ok, "rgb(255 0 0 / 0.5)"}
 
       iex> Color.to_css("rebeccapurple")
-      "rgb(102 51 153)"
+      {:ok, "rgb(102 51 153)"}
 
       iex> Color.to_css(%Color.Lab{l: 50.0, a: 40.0, b: 30.0})
-      "lab(50% 40 30)"
+      {:ok, "lab(50% 40 30)"}
 
       iex> Color.to_css(%Color.Oklch{l: 0.7, c: 0.15, h: 180.0})
-      "oklch(70% 0.15 180)"
+      {:ok, "oklch(70% 0.15 180)"}
 
       iex> Color.to_css(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0}, as: :hex)
-      "#ff0000"
+      {:ok, "#ff0000"}
 
   """
-  @spec to_css(input(), keyword()) :: String.t()
+  @spec to_css(input(), keyword()) :: {:ok, String.t()} | {:error, Exception.t()}
   def to_css(color, options \\ []) do
     case new(color) do
-      {:ok, struct} -> Color.CSS.to_css(struct, options)
+      {:ok, struct} -> {:ok, Color.CSS.to_css(struct, options)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Same as `to_css/2` but raises a typed exception on invalid input.
+
+  ### Examples
+
+      iex> Color.to_css!("#ff0000")
+      "rgb(255 0 0)"
+
+  """
+  @spec to_css!(input(), keyword()) :: String.t()
+  def to_css!(color, options \\ []) do
+    case to_css(color, options) do
+      {:ok, css} -> css
       {:error, exception} -> raise exception
     end
   end
@@ -1736,32 +1759,49 @@ defmodule Color do
 
   ### Returns
 
-  * A string starting with `#`.
+  * `{:ok, string}` where the string starts with `#`, or
+
+  * `{:error, exception}` where `exception` is a typed error struct.
 
   ### Examples
 
       iex> Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0})
-      "#ff0000"
+      {:ok, "#ff0000"}
 
       iex> Color.to_hex("rebeccapurple")
-      "#663399"
+      {:ok, "#663399"}
 
       iex> Color.to_hex(%Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032})
-      "#ff0000"
+      {:ok, "#ff0000"}
 
       iex> Color.to_hex(%Color.Oklch{l: 0.7, c: 0.15, h: 30.0})
-      "#ed7664"
+      {:ok, "#ed7664"}
 
       iex> Color.to_hex(%Color.SRGB{r: 1.0, g: 0.0, b: 0.0, alpha: 0.5})
-      "#ff000080"
+      {:ok, "#ff000080"}
 
   """
-  @spec to_hex(input()) :: String.t()
+  @spec to_hex(input()) :: {:ok, String.t()} | {:error, Exception.t()}
   def to_hex(color) do
     with {:ok, source} <- new(color),
          {:ok, srgb} <- convert(source, Color.SRGB) do
-      Color.SRGB.to_hex(srgb)
-    else
+      {:ok, Color.SRGB.to_hex(srgb)}
+    end
+  end
+
+  @doc """
+  Same as `to_hex/1` but raises a typed exception on invalid input.
+
+  ### Examples
+
+      iex> Color.to_hex!("rebeccapurple")
+      "#663399"
+
+  """
+  @spec to_hex!(input()) :: String.t()
+  def to_hex!(color) do
+    case to_hex(color) do
+      {:ok, hex} -> hex
       {:error, exception} -> raise exception
     end
   end
@@ -1786,28 +1826,52 @@ defmodule Color do
 
   ### Returns
 
-  * A binary string containing the escape sequence.
+  * `{:ok, string}` carrying the escape sequence, or
+
+  * `{:error, exception}` where `exception` is a typed error struct.
 
   ### Examples
 
-      iex> Color.to_ansi("red") == "\\e[38;2;255;0;0m"
-      true
+      iex> Color.to_ansi("red")
+      {:ok, "\\e[38;2;255;0;0m"}
 
-      iex> Color.to_ansi("red", mode: :ansi256) == "\\e[38;5;196m"
-      true
+      iex> Color.to_ansi("red", mode: :ansi256)
+      {:ok, "\\e[38;5;196m"}
 
-      iex> Color.to_ansi("red", mode: :ansi16) == "\\e[91m"
-      true
+      iex> Color.to_ansi("red", mode: :ansi16)
+      {:ok, "\\e[91m"}
 
-      iex> Color.to_ansi("red", layer: :background) == "\\e[48;2;255;0;0m"
-      true
+      iex> Color.to_ansi("red", layer: :background)
+      {:ok, "\\e[48;2;255;0;0m"}
 
-      iex> Color.to_ansi(%Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032}) == "\\e[38;2;255;0;0m"
-      true
+      iex> Color.to_ansi(%Color.Lab{l: 53.2408, a: 80.0925, b: 67.2032})
+      {:ok, "\\e[38;2;255;0;0m"}
 
   """
-  @spec to_ansi(input(), keyword()) :: String.t()
-  def to_ansi(color, options \\ []), do: Color.ANSI.to_string(color, options)
+  @spec to_ansi(input(), keyword()) :: {:ok, String.t()} | {:error, Exception.t()}
+  def to_ansi(color, options \\ []) do
+    case new(color) do
+      {:ok, struct} -> {:ok, Color.ANSI.to_string(struct, options)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
+  Same as `to_ansi/2` but raises a typed exception on invalid input.
+
+  ### Examples
+
+      iex> Color.to_ansi!("red")
+      "\\e[38;2;255;0;0m"
+
+  """
+  @spec to_ansi!(input(), keyword()) :: String.t()
+  def to_ansi!(color, options \\ []) do
+    case to_ansi(color, options) do
+      {:ok, ansi} -> ansi
+      {:error, exception} -> raise exception
+    end
+  end
 
   @doc """
   Sorts a list of colors by a perceptual criterion.

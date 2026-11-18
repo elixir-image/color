@@ -51,7 +51,7 @@ defmodule Color.Gamut.SVG do
 
   # Planckian annotation points — Kelvin values labelled on the
   # dashed blackbody curve.
-  @planck_annotations [2000, 2700, 4000, 6500, 10000]
+  @planck_annotations [2000, 2700, 4000, 6500, 10_000]
 
   # Chromaticity-space extents per projection.
   @xy_extent %{x: {0.0, 0.8}, y: {0.0, 0.9}}
@@ -121,7 +121,7 @@ defmodule Color.Gamut.SVG do
     locus = Diagram.spectral_locus(projection)
 
     planckian =
-      if show_planck?, do: Diagram.planckian_locus(1500..20000//500, projection), else: []
+      if show_planck?, do: Diagram.planckian_locus(1500..20_000//500, projection), else: []
 
     seed_point =
       case seed do
@@ -196,7 +196,7 @@ defmodule Color.Gamut.SVG do
         {:ok, point} ->
           %{
             label: label,
-            hex: Color.to_hex(color),
+            hex: Color.to_hex!(color),
             point: point,
             is_seed: label == seed_stop
           }
@@ -414,7 +414,7 @@ defmodule Color.Gamut.SVG do
 
   defp safe_hex(input) do
     case Color.new(input) do
-      {:ok, srgb} -> Color.to_hex(srgb)
+      {:ok, srgb} -> Color.to_hex!(srgb)
       _ -> "#000000"
     end
   rescue

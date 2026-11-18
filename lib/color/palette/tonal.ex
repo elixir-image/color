@@ -61,11 +61,11 @@ defmodule Color.Palette.Tonal do
   ## Example
 
       iex> palette = Color.Palette.Tonal.new("#3b82f6")
-      iex> Map.fetch!(palette.stops, 50) |> Color.to_hex()
+      iex> Map.fetch!(palette.stops, 50) |> Color.to_hex!()
       "#f5f9ff"
 
       iex> palette = Color.Palette.Tonal.new("#3b82f6")
-      iex> Map.fetch!(palette.stops, 950) |> Color.to_hex()
+      iex> Map.fetch!(palette.stops, 950) |> Color.to_hex!()
       "#000827"
 
   """
@@ -438,7 +438,7 @@ defmodule Color.Palette.Tonal do
     body =
       Enum.map_join(labels, "", fn label ->
         color = Map.fetch!(palette.stops, label)
-        "  --#{name}-#{label}: #{Color.to_hex(color)};\n"
+        "  --#{name}-#{label}: #{Color.to_hex!(color)};\n"
       end)
 
     "#{selector} {\n#{body}}\n"
@@ -481,7 +481,7 @@ defmodule Color.Palette.Tonal do
     body =
       Enum.map_join(labels, "", fn label ->
         color = Map.fetch!(palette.stops, label)
-        "  --color-#{name}-#{label}: #{Color.to_hex(color)};\n"
+        "  --color-#{name}-#{label}: #{Color.to_hex!(color)};\n"
       end)
 
     "@theme {\n#{body}}\n"

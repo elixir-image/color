@@ -90,28 +90,26 @@ defmodule Color.Palette.Visualizer.SpectrumView do
   end
 
   defp build_body(inputs, bin_width, chroma_threshold, hue_origin) do
-    try do
-      items = Enum.map(inputs, &prepare/1)
-      {chromatic, achromatic} = partition(items, chroma_threshold)
+    items = Enum.map(inputs, &prepare/1)
+    {chromatic, achromatic} = partition(items, chroma_threshold)
 
-      svg = render_svg(chromatic, achromatic, bin_width, hue_origin)
-      summary = render_summary(items, chromatic, achromatic, chroma_threshold)
+    svg = render_svg(chromatic, achromatic, bin_width, hue_origin)
+    summary = render_summary(items, chromatic, achromatic, chroma_threshold)
 
-      body = [
-        "<section class=\"vz-section\">",
-        "<h2>Hue spectrum</h2>",
-        svg,
-        "</section>",
-        "<section class=\"vz-section\">",
-        "<h2>Summary</h2>",
-        summary,
-        "</section>"
-      ]
+    body = [
+      "<section class=\"vz-section\">",
+      "<h2>Hue spectrum</h2>",
+      svg,
+      "</section>",
+      "<section class=\"vz-section\">",
+      "<h2>Summary</h2>",
+      summary,
+      "</section>"
+    ]
 
-      {body, nil}
-    rescue
-      e -> {[], Exception.message(e)}
-    end
+    {body, nil}
+  rescue
+    e -> {[], Exception.message(e)}
   end
 
   defp prepare(srgb) do
@@ -119,7 +117,7 @@ defmodule Color.Palette.Visualizer.SpectrumView do
 
     %{
       output: srgb,
-      hex: Color.to_hex(srgb),
+      hex: Color.to_hex!(srgb),
       l: oklch.l || 0.0,
       c: oklch.c || 0.0,
       h: oklch.h || 0.0,
